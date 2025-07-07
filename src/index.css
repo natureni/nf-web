@@ -1,0 +1,181 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f5f5;
+}
+
+.ant-layout {
+  min-height: 100vh;
+}
+
+.ant-layout-content {
+  padding: 24px;
+  background-color: #f5f5f5;
+}
+
+.content-wrapper {
+  background: #fff;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  margin: 0;
+  color: #262626;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.dashboard-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 24px;
+  color: white;
+  margin-bottom: 24px;
+}
+
+.dashboard-card h3 {
+  color: white;
+  margin-bottom: 16px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-pending {
+  background-color: #f0f0f0;
+  color: #595959;
+}
+
+.status-processing {
+  background-color: #e6f7ff;
+  color: #1890ff;
+}
+
+.status-modeling {
+  background-color: #fff7e6;
+  color: #fa8c16;
+}
+
+.status-rendering {
+  background-color: #f6ffed;
+  color: #52c41a;
+}
+
+.status-delivering {
+  background-color: #fff2f0;
+  color: #ff4d4f;
+}
+
+/* 表格行样式 */
+.table-row-light {
+  background-color: #fafafa;
+}
+
+.table-row-dark {
+  background-color: #ffffff;
+}
+
+.table-row-light:hover,
+.table-row-dark:hover {
+  background-color: #e6f7ff !important;
+}
+
+/* 表格边框和间距优化 */
+.ant-table-thead > tr > th {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #e8e8e8;
+  font-weight: 600;
+  color: #262626;
+}
+
+.ant-table-tbody > tr > td {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 12px 16px;
+}
+
+/* 进度条样式优化 */
+.ant-progress-inner {
+  border-radius: 6px;
+}
+
+.ant-progress-bg {
+  border-radius: 6px;
+}
+
+/* 标签样式优化 */
+.ant-tag {
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border: none;
+}
+
+/* 甘特图表格样式 */
+.gantt-table .ant-table-thead > tr > th {
+  background: #fafafa;
+  border-bottom: 2px solid #e8e8e8;
+  padding: 8px 4px;
+}
+
+.gantt-table .ant-table-tbody > tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.gantt-table .ant-table-tbody > tr:hover {
+  background-color: #e6f7ff;
+}
+
+/* 今日列样式 */
+.gantt-table .today-column {
+  background: linear-gradient(to bottom, #fff7e6 0%, #fff1d6 100%) !important;
+  position: relative;
+}
+
+.gantt-table .ant-table-tbody > tr > td.today-column {
+  background: linear-gradient(to bottom, #fff7e6 0%, #fff1d6 100%) !important;
+  border-left: 3px solid #faad14;
+  border-right: 3px solid #faad14;
+  position: relative;
+}
+
+.gantt-table .ant-table-tbody > tr:first-child > td.today-column {
+  border-top: 3px solid #faad14;
+}
+
+.gantt-table .ant-table-tbody > tr:last-child > td.today-column {
+  border-bottom: 3px solid #faad14;
+}
+
+/* 今日列阴影效果 */
+.gantt-table .today-column::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(250, 173, 20, 0.1);
+  pointer-events: none;
+  z-index: 1;
+} 

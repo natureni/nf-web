@@ -73,130 +73,201 @@ const ProjectList: React.FC = () => {
   const [searchText, setSearchText] = useState('')
   const [contractModalVisible, setContractModalVisible] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [projects, setProjects] = useState<Project[]>([])
 
-  // 更完整的项目数据，根据参考图
-  const [projects] = useState<Project[]>([
-    {
-      id: 'NF2501',
-      name: 'Sydney CBD Tower',
-      protocolNumber: 'NF2501',
-      client: 'Bathurst开发公司',
-      status: 'reporting',
-      deadline: '2025-03-15',
-      budget: 45000, // 澳元预算
-      currency: 'AUD',
-      exchangeRate: 4.78,
-      budgetCNY: 215100, // 转换为人民币
-      paymentStatus: 'unpaid',
-      progress: 8,
-      type: '商业综合体',
-    },
-    {
-      id: 'NF2502',
-      name: 'Manhattan Office Complex',
-      protocolNumber: 'NF2502',
-      client: 'NCCEC集团',
-      status: 'modeling',
-      deadline: '2025-04-20',
-      budget: 68000, // 美元预算
-      currency: 'USD',
-      exchangeRate: 7.24,
-      budgetCNY: 492320, // 转换为人民币
-      paymentStatus: 'partial',
-      progress: 35,
-      type: '办公建筑',
-    },
-    {
-      id: 'NF2503',
-      name: 'Berlin Innovation Center',
-      protocolNumber: 'NF2503',
-      client: 'Olympic Club International',
-      status: 'rendering',
-      deadline: '2025-02-28',
-      budget: 52000, // 欧元预算
-      currency: 'EUR',
-      exchangeRate: 7.85,
-      budgetCNY: 408200, // 转换为人民币
-      paymentStatus: 'partial',
-      progress: 72,
-      type: '创新中心',
-    },
-    {
-      id: 'NF2504',
-      name: '上海国际金融中心',
-      protocolNumber: 'NF2504',
-      client: 'Norwell置业',
-      status: 'delivering',
-      deadline: '2025-02-15',
-      budget: 278740, // 人民币预算
-      currency: 'CNY',
-      exchangeRate: 1.00,
-      budgetCNY: 278740, // 转换为人民币
-      paymentStatus: 'completed',
-      progress: 95,
-      type: '金融中心',
-    },
-    {
-      id: 'NF2505',
-      name: 'Dubai Marina Towers',
-      protocolNumber: 'NF2505',
-      client: '科技创新园',
-      status: 'modeling',
-      deadline: '2025-05-10',
-      budget: 275000, // 迪拉姆预算
-      currency: 'AED',
-      exchangeRate: 1.97,
-      budgetCNY: 541750, // 转换为人民币
-      paymentStatus: 'partial',
-      progress: 28,
-      type: '海滨大厦',
-    },
-    {
-      id: 'NF2506',
-      name: 'Toronto Skyline Plaza',
-      protocolNumber: 'NF2506',
-      client: '文化艺术区管委会',
-      status: 'rendering',
-      deadline: '2025-03-25',
-      budget: 58000, // 加元预算
-      currency: 'CAD',
-      exchangeRate: 5.32,
-      budgetCNY: 308560, // 转换为人民币
-      paymentStatus: 'completed',
-      progress: 88,
-      type: '城市广场',
-    },
-    {
-      id: 'NF2507',
-      name: 'London Bridge District',
-      protocolNumber: 'NF2507',
-      client: '海滨度假村集团',
-      status: 'delivering',
-      deadline: '2025-02-20',
-      budget: 48000, // 英镑预算
-      currency: 'GBP',
-      exchangeRate: 9.12,
-      budgetCNY: 437760, // 转换为人民币
-      paymentStatus: 'completed',
-      progress: 100,
-      type: '商业区',
-    },
-    {
-      id: 'NF2508',
-      name: 'Singapore Bay Gardens',
-      protocolNumber: 'NF2508',
-      client: '智慧城市开发商',
-      status: 'reporting',
-      deadline: '2025-06-15',
-      budget: 110000, // 新加坡元预算
-      currency: 'SGD',
-      exchangeRate: 5.36,
-      budgetCNY: 589600, // 转换为人民币
-      paymentStatus: 'unpaid',
-      progress: 12,
-      type: '海湾花园',
-    },
-  ])
+  // 获取默认示例项目数据
+  const getDefaultProjects = (): Project[] => {
+    return [
+      {
+        id: 'NF2501',
+        name: 'Sydney CBD Tower',
+        protocolNumber: 'NF2501',
+        client: 'Bathurst开发公司',
+        status: 'reporting',
+        deadline: '2025-03-15',
+        budget: 45000, // 澳元预算
+        currency: 'AUD',
+        exchangeRate: 4.78,
+        budgetCNY: 215100, // 转换为人民币
+        paymentStatus: 'unpaid',
+        progress: 8,
+        type: '商业综合体',
+      },
+      {
+        id: 'NF2502',
+        name: 'Manhattan Office Complex',
+        protocolNumber: 'NF2502',
+        client: 'NCCEC集团',
+        status: 'modeling',
+        deadline: '2025-04-20',
+        budget: 68000, // 美元预算
+        currency: 'USD',
+        exchangeRate: 7.24,
+        budgetCNY: 492320, // 转换为人民币
+        paymentStatus: 'partial',
+        progress: 35,
+        type: '办公建筑',
+      },
+      {
+        id: 'NF2503',
+        name: 'Berlin Innovation Center',
+        protocolNumber: 'NF2503',
+        client: 'Olympic Club International',
+        status: 'rendering',
+        deadline: '2025-02-28',
+        budget: 52000, // 欧元预算
+        currency: 'EUR',
+        exchangeRate: 7.85,
+        budgetCNY: 408200, // 转换为人民币
+        paymentStatus: 'partial',
+        progress: 72,
+        type: '创新中心',
+      },
+      {
+        id: 'NF2504',
+        name: '上海国际金融中心',
+        protocolNumber: 'NF2504',
+        client: 'Norwell置业',
+        status: 'delivering',
+        deadline: '2025-02-15',
+        budget: 278740, // 人民币预算
+        currency: 'CNY',
+        exchangeRate: 1.00,
+        budgetCNY: 278740, // 转换为人民币
+        paymentStatus: 'completed',
+        progress: 95,
+        type: '金融中心',
+      },
+      {
+        id: 'NF2505',
+        name: 'Dubai Marina Towers',
+        protocolNumber: 'NF2505',
+        client: '科技创新园',
+        status: 'modeling',
+        deadline: '2025-05-10',
+        budget: 275000, // 迪拉姆预算
+        currency: 'AED',
+        exchangeRate: 1.97,
+        budgetCNY: 541750, // 转换为人民币
+        paymentStatus: 'partial',
+        progress: 28,
+        type: '海滨大厦',
+      },
+      {
+        id: 'NF2506',
+        name: 'Toronto Skyline Plaza',
+        protocolNumber: 'NF2506',
+        client: '文化艺术区管委会',
+        status: 'rendering',
+        deadline: '2025-03-25',
+        budget: 58000, // 加元预算
+        currency: 'CAD',
+        exchangeRate: 5.32,
+        budgetCNY: 308560, // 转换为人民币
+        paymentStatus: 'completed',
+        progress: 88,
+        type: '城市广场',
+      },
+      {
+        id: 'NF2507',
+        name: 'London Bridge District',
+        protocolNumber: 'NF2507',
+        client: '海滨度假村集团',
+        status: 'delivering',
+        deadline: '2025-02-20',
+        budget: 48000, // 英镑预算
+        currency: 'GBP',
+        exchangeRate: 9.12,
+        budgetCNY: 437760, // 转换为人民币
+        paymentStatus: 'completed',
+        progress: 100,
+        type: '商业区',
+      },
+      {
+        id: 'NF2508',
+        name: 'Singapore Bay Gardens',
+        protocolNumber: 'NF2508',
+        client: '智慧城市开发商',
+        status: 'reporting',
+        deadline: '2025-06-15',
+        budget: 110000, // 新加坡元预算
+        currency: 'SGD',
+        exchangeRate: 5.36,
+        budgetCNY: 589600, // 转换为人民币
+        paymentStatus: 'unpaid',
+        progress: 12,
+        type: '海湾花园',
+      },
+    ]
+  }
+
+  // 加载项目数据
+  const loadProjects = () => {
+    try {
+      const storedProjectsJson = localStorage.getItem('nflab_projects')
+      if (storedProjectsJson) {
+        const storedProjects = JSON.parse(storedProjectsJson)
+        setProjects(storedProjects)
+        console.log('从localStorage加载项目数据:', storedProjects)
+      } else {
+        // 如果没有存储的数据，使用默认示例数据并保存到localStorage
+        const defaultProjects = getDefaultProjects()
+        setProjects(defaultProjects)
+        localStorage.setItem('nflab_projects', JSON.stringify(defaultProjects))
+        console.log('初始化默认项目数据:', defaultProjects)
+      }
+    } catch (error) {
+      console.error('加载项目数据失败:', error)
+      // 出错时使用默认数据
+      const defaultProjects = getDefaultProjects()
+      setProjects(defaultProjects)
+      message.error('加载项目数据失败，显示默认数据')
+    }
+  }
+
+  // 组件挂载时加载数据
+  React.useEffect(() => {
+    loadProjects()
+  }, [])
+
+  // 页面获得焦点时重新加载数据（从其他页面返回时）
+  React.useEffect(() => {
+    const handleFocus = () => {
+      loadProjects()
+    }
+    
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [])
+
+  // 删除项目
+  const handleDeleteProject = (project: Project) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定要删除项目"${project.name}"吗？此操作不可恢复。`,
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: () => {
+        try {
+          // 从当前项目列表中移除
+          const updatedProjects = projects.filter(p => p.id !== project.id)
+          
+          // 更新状态
+          setProjects(updatedProjects)
+          
+          // 更新localStorage
+          localStorage.setItem('nflab_projects', JSON.stringify(updatedProjects))
+          
+          message.success(`项目"${project.name}"删除成功`)
+          console.log('项目删除成功:', project.name)
+        } catch (error) {
+          console.error('删除项目失败:', error)
+          message.error('删除项目失败，请重试')
+        }
+      },
+    })
+  }
 
   // 状态配置 - 按要求修改为4个状态
   const getStatusConfig = (status: string) => {
@@ -826,16 +897,7 @@ const ProjectList: React.FC = () => {
               type="text" 
               size="small" 
               icon={<DeleteOutlined style={{ color: '#ff4d4f' }} />}
-              onClick={() => {
-                Modal.confirm({
-                  title: '确认删除',
-                  content: `确定要删除项目"${record.name}"吗？`,
-                  okText: '删除',
-                  okType: 'danger',
-                  cancelText: '取消',
-                  onOk: () => message.success('项目删除成功'),
-                })
-              }}
+              onClick={() => handleDeleteProject(record)}
             />
           </Tooltip>
         </Space>

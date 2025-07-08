@@ -28,14 +28,6 @@ const ClientTable: React.FC<ClientTableProps> = ({
   onEditClient,
   onDeleteClient
 }) => {
-  const regionConfig: RegionConfig = {
-    'Asia-Pacific': { text: 'Asia-Pacific 亚太地区', color: 'blue' },
-    'North-America': { text: 'North-America 北美', color: 'green' },
-    'Europe': { text: 'Europe 欧洲', color: 'purple' },
-    'Middle-East': { text: 'Middle-East 中东', color: 'orange' },
-    'Other': { text: 'Other 其他', color: 'default' }
-  }
-
   const statusConfig = {
     active: { text: 'Active 活跃', color: 'success' },
     inactive: { text: 'Inactive 非活跃', color: 'default' },
@@ -79,11 +71,8 @@ const ClientTable: React.FC<ClientTableProps> = ({
             <div style={{ fontWeight: 500, fontSize: 14 }}>
               {record.companyName}
             </div>
-            <div style={{ color: '#666', fontSize: 12 }}>
-              {record.companyNameCN}
-            </div>
             <div style={{ color: '#999', fontSize: 12 }}>
-              {record.contactPerson} ({record.contactPersonCN})
+              {record.contactPerson}
             </div>
           </div>
         </div>
@@ -109,30 +98,20 @@ const ClientTable: React.FC<ClientTableProps> = ({
       ),
     },
     {
-      title: '地区 / Region',
-      dataIndex: 'region',
-      key: 'region',
-      width: 150,
-      render: (region: Client['region']) => (
-        <Tag color={regionConfig[region].color}>
-          {regionConfig[region].text}
-        </Tag>
-      ),
-    },
-    {
-      title: '项目统计 / Projects',
-      key: 'projectStats',
-      width: 120,
+      title: '项目偏好 / Preferences',
+      key: 'preferences',
+      width: 200,
       render: (_, record) => (
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 16, fontWeight: 'bold', color: '#1890ff' }}>
-            {record.projectHistory.total}
+        <div>
+          <div style={{ fontSize: 12, marginBottom: 4 }}>
+            <strong>风格：</strong>
+            {Array.isArray(record.projectPreferences.style) 
+              ? record.projectPreferences.style.slice(0, 2).join(', ') 
+              : record.projectPreferences.style}
+            {Array.isArray(record.projectPreferences.style) && record.projectPreferences.style.length > 2 && '...'}
           </div>
-          <div style={{ fontSize: 11, color: '#666' }}>
-            完成 {record.projectHistory.completed} | 进行中 {record.projectHistory.ongoing}
-          </div>
-          <div style={{ fontSize: 11, color: '#52c41a', fontWeight: 500 }}>
-            ${record.projectHistory.value.toLocaleString()}
+          <div style={{ fontSize: 12, color: '#666' }}>
+            <strong>预算：</strong>{record.projectPreferences.budget}
           </div>
         </div>
       ),

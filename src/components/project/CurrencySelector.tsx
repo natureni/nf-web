@@ -17,6 +17,20 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
   onCurrencyChange,
   showAlert = true
 }) => {
+  // 对币种进行排序：美元第一，人民币第二，澳币第三，其他按字母顺序
+  const sortedRates = [...exchangeRates].sort((a, b) => {
+    const order = ['USD', 'CNY', 'AUD']
+    const aIndex = order.indexOf(a.currencyCode)
+    const bIndex = order.indexOf(b.currencyCode)
+    
+    if (aIndex !== -1 && bIndex !== -1) {
+      return aIndex - bIndex
+    }
+    if (aIndex !== -1) return -1
+    if (bIndex !== -1) return 1
+    return a.currencyCode.localeCompare(b.currencyCode)
+  })
+
   return (
     <>
       <Select 
@@ -25,7 +39,7 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
         placeholder="选择币种"
         style={{ width: '100%' }}
       >
-        {exchangeRates.map(rate => (
+        {sortedRates.map(rate => (
           <Option key={rate.currencyCode} value={rate.currencyCode}>
             <Space>
               <span>{rate.flag}</span>

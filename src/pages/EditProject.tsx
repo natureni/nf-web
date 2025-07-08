@@ -330,13 +330,15 @@ const EditProject: React.FC = () => {
   // 如果正在加载，显示加载指示器
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '50vh'
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '60vh',
+        flexDirection: 'column'
       }}>
-        <Spin size="large" tip="正在加载项目信息..." />
+        <Spin size="large" />
+        <div style={{ marginTop: 16, color: '#666' }}>正在加载项目信息...</div>
       </div>
     )
   }

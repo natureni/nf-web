@@ -10,15 +10,18 @@ interface ProjectBudgetConfigProps {
   form: any
   budgetConfig: {
     birdViewPrice: number
+    halfBirdViewPrice: number // 新增半鸟瞰图单价
     humanViewPrice: number
     animationPrice: number
     birdViewDiscount: number
+    halfBirdViewDiscount: number // 新增半鸟瞰图折扣
     humanViewDiscount: number
     animationDiscount: number
     currency: string
   }
   imageQuantity: {
     birdViewCount: number
+    halfBirdViewCount: number // 新增半鸟瞰图数量
     humanViewCount: number
     animationDuration: number
   }
@@ -49,15 +52,17 @@ const ProjectBudgetConfig: React.FC<ProjectBudgetConfigProps> = ({
     const exchangeRate = exchangeRates.find(r => r.currencyCode === budgetConfig.currency)?.rate || 1
     
     const birdViewOriginal = imageQuantity.birdViewCount * budgetConfig.birdViewPrice * budgetConfig.birdViewDiscount / 100
+    const halfBirdViewOriginal = imageQuantity.halfBirdViewCount * budgetConfig.halfBirdViewPrice * budgetConfig.halfBirdViewDiscount / 100
     const humanViewOriginal = imageQuantity.humanViewCount * budgetConfig.humanViewPrice * budgetConfig.humanViewDiscount / 100
     const animationOriginal = imageQuantity.animationDuration * budgetConfig.animationPrice * budgetConfig.animationDiscount / 100
-    const totalOriginal = birdViewOriginal + humanViewOriginal + animationOriginal
+    const totalOriginal = birdViewOriginal + halfBirdViewOriginal + humanViewOriginal + animationOriginal
     const totalCNY = totalOriginal * exchangeRate
     
     return {
       currencySymbol,
       exchangeRate,
       birdViewOriginal,
+      halfBirdViewOriginal,
       humanViewOriginal,
       animationOriginal,
       totalOriginal,
@@ -72,39 +77,63 @@ const ProjectBudgetConfig: React.FC<ProjectBudgetConfigProps> = ({
       {/* 项目图量 */}
       <Card size="small" title="项目图量设置" style={{ marginBottom: 16 }}>
         <Row gutter={16}>
-          <Col span={8}>
+          <Col span={6}>
             <Form.Item label="鸟瞰图" name="birdViewCount">
               <InputNumber
                 style={{ width: '100%' }}
                 min={0}
                 placeholder="几张"
                 suffix="张"
-                value={imageQuantity.birdViewCount}
-                onChange={(value) => onImageQuantityChange('birdViewCount', value)}
+                onChange={(value) => {
+                  onImageQuantityChange('birdViewCount', value)
+                  // 同时更新表单字段
+                  form.setFieldsValue({ birdViewCount: value })
+                }}
               />
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col span={6}>
+            <Form.Item label="半鸟瞰图" name="halfBirdViewCount">
+              <InputNumber
+                style={{ width: '100%' }}
+                min={0}
+                placeholder="几张"
+                suffix="张"
+                onChange={(value) => {
+                  onImageQuantityChange('halfBirdViewCount', value)
+                  // 同时更新表单字段
+                  form.setFieldsValue({ halfBirdViewCount: value })
+                }}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={6}>
             <Form.Item label="人视角图" name="humanViewCount">
               <InputNumber
                 style={{ width: '100%' }}
                 min={0}
                 placeholder="几张"
                 suffix="张"
-                value={imageQuantity.humanViewCount}
-                onChange={(value) => onImageQuantityChange('humanViewCount', value)}
+                onChange={(value) => {
+                  onImageQuantityChange('humanViewCount', value)
+                  // 同时更新表单字段
+                  form.setFieldsValue({ humanViewCount: value })
+                }}
               />
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col span={6}>
             <Form.Item label="动画时长" name="animationDuration">
               <InputNumber
                 style={{ width: '100%' }}
                 min={0}
                 placeholder="几秒"
                 suffix="秒"
-                value={imageQuantity.animationDuration}
-                onChange={(value) => onImageQuantityChange('animationDuration', value)}
+                onChange={(value) => {
+                  onImageQuantityChange('animationDuration', value)
+                  // 同时更新表单字段
+                  form.setFieldsValue({ animationDuration: value })
+                }}
               />
             </Form.Item>
           </Col>
@@ -124,10 +153,23 @@ const ProjectBudgetConfig: React.FC<ProjectBudgetConfigProps> = ({
               />
             </Form.Item>
           </Col>
+          <Col span={16}>
+            <div style={{ 
+              background: '#f0f8ff', 
+              border: '1px solid #d1e9ff', 
+              borderRadius: '6px', 
+              padding: '8px 12px',
+              marginTop: 24
+            }}>
+              <div style={{ fontSize: 12, color: '#1890ff' }}>
+                💡 <strong>币种说明：</strong>支持美元、人民币、澳元等多种币种计价。选择人民币时汇率为1.0，无需转换。
+              </div>
+            </div>
+          </Col>
         </Row>
 
         <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={8}>
+          <Col span={6}>
             <Form.Item label={`鸟瞰图单价(${budgetDetails.currencySymbol})`}>
               <InputNumber
                 style={{ width: '100%' }}
@@ -137,7 +179,17 @@ const ProjectBudgetConfig: React.FC<ProjectBudgetConfigProps> = ({
               />
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col span={6}>
+            <Form.Item label={`半鸟瞰图单价(${budgetDetails.currencySymbol})`}>
+              <InputNumber
+                style={{ width: '100%' }}
+                min={0}
+                value={budgetConfig.halfBirdViewPrice}
+                onChange={(value) => onBudgetConfigChange('halfBirdViewPrice', value)}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={6}>
             <Form.Item label={`人视角单价(${budgetDetails.currencySymbol})`}>
               <InputNumber
                 style={{ width: '100%' }}
@@ -147,7 +199,7 @@ const ProjectBudgetConfig: React.FC<ProjectBudgetConfigProps> = ({
               />
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col span={6}>
             <Form.Item label={`动画单价(${budgetDetails.currencySymbol}/秒)`}>
               <InputNumber
                 style={{ width: '100%' }}
@@ -159,8 +211,8 @@ const ProjectBudgetConfig: React.FC<ProjectBudgetConfigProps> = ({
           </Col>
         </Row>
         
-        <Row gutter={16}>
-          <Col span={8}>
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col span={6}>
             <Form.Item label="鸟瞰图折扣(%)">
               <InputNumber
                 style={{ width: '100%' }}
@@ -171,7 +223,18 @@ const ProjectBudgetConfig: React.FC<ProjectBudgetConfigProps> = ({
               />
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col span={6}>
+            <Form.Item label="半鸟瞰图折扣(%)">
+              <InputNumber
+                style={{ width: '100%' }}
+                min={0}
+                max={100}
+                value={budgetConfig.halfBirdViewDiscount}
+                onChange={(value) => onBudgetConfigChange('halfBirdViewDiscount', value)}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={6}>
             <Form.Item label="人视角折扣(%)">
               <InputNumber
                 style={{ width: '100%' }}
@@ -182,7 +245,7 @@ const ProjectBudgetConfig: React.FC<ProjectBudgetConfigProps> = ({
               />
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col span={6}>
             <Form.Item label="动画折扣(%)">
               <InputNumber
                 style={{ width: '100%' }}

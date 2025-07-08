@@ -1,27 +1,42 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import {
-  Steps,
-  Button,
-  Form,
-  message,
+import { 
+  Card, 
+  Steps, 
+  Button, 
+  Form, 
+  Input, 
+  Select, 
+  DatePicker, 
+  message, 
+  Row, 
+  Col, 
+  Divider, 
+  Space, 
+  Alert, 
   Spin,
-  Tag,
+  Tag
 } from 'antd'
-import {
-  ArrowLeftOutlined,
+import { 
+  FileTextOutlined, 
+  TeamOutlined, 
+  DollarOutlined, 
+  CalendarOutlined, 
+  CheckCircleOutlined,
+  ArrowLeftOutlined
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
-
-// 导入拆分的组件
+import { getCurrentExchangeRates, isFixedRateMode, getExchangeRate } from '../utils/exchangeRates'
 import ProjectBasicInfo from '../components/project/ProjectBasicInfo'
 import ProjectBudgetConfig from '../components/project/ProjectBudgetConfig'
 import TeamAssignment from '../components/project/TeamAssignment'
 import ProjectSchedule from '../components/project/ProjectSchedule'
 import ProjectSummary from '../components/project/ProjectSummary'
 
+const { Option } = Select
 const { Step } = Steps
 
+// 本地类型定义
 interface ExchangeRate {
   currency: string
   currencyCode: string
@@ -32,72 +47,68 @@ interface ExchangeRate {
   flag?: string
 }
 
-interface TeamMember {
-  id: string
-  name: string
-  department: string
-  unitPrice: number
-  priceType: 'fixed' | 'percentage'
-  birdViewPrice?: number // 鸟瞰单价
-  humanViewPrice?: number // 人视角单价
-  animationPrice?: number // 动画单价（每秒）
-  customPrice?: number // 自定义单价
-  cost?: number
-  unit?: string
-  assignedBirdView?: number // 分配的鸟瞰图数量
-  assignedHumanView?: number // 分配的人视角图数量
-  assignedAnimation?: number // 分配的动画时长（仅渲染）
-}
-
 interface Client {
   id: string
   companyName: string
-  companyNameCN: string
   contactPerson: string
-  preferredCurrency: string // 客户偏好币种
+  email: string
+  phone: string
+  preferredCurrency: string
   projectPreferences: {
-    style: string[]
+    style: string | string[]
     budget: string | string[]
     timeline: string | string[]
     communication: string | string[]
   }
 }
 
-interface DepartmentCost {
-  department: string
-  departmentName: string
-  members: TeamMember[]
-  totalCost: number
-}
-
-// 项目数据接口
 interface Project {
   id: string
   name: string
   protocolNumber: string
   client: string
-  status: 'reporting' | 'modeling' | 'rendering' | 'delivering'
+  status: string
   deadline: string
   budget: number
   currency: string
   exchangeRate: number
   budgetCNY: number
-  paymentStatus: 'unpaid' | 'partial' | 'completed' | 'overdue'
+  paymentStatus: string
   progress: number
   type: string
   createdAt?: string
   updatedAt?: string
 }
 
-// 时间安排项目接口
+interface TeamMember {
+  id: string
+  name: string
+  department: string
+  position: string
+  hourlyRate: number
+  avatar?: string
+}
+
+interface DepartmentCost {
+  department: string
+  members: TeamMember[]
+  hourlyRate: number
+  estimatedHours: number
+  totalCost: number
+}
+
 interface ScheduleItem {
   id: string
-  phase: string
+  title: string
+  department: string
   startDate: string
   endDate: string
-  color: string
-  autoSchedule: boolean
   duration: number
+  dependencies: string[]
+  assignedTo: string[]
+  status: 'pending' | 'in-progress' | 'completed' | 'delayed'
+  progress: number
+  description?: string
 }
 
 const CreateProject: React.FC = () => {
@@ -112,38 +123,36 @@ const CreateProject: React.FC = () => {
   const [currentProject, setCurrentProject] = useState<Project | null>(null) // 当前编辑的项目
   
   // 币种和汇率相关状态
-  const [selectedCurrency, setSelectedCurrency] = useState<string>('CNY') // 默认人民币
+  const [selectedCurrency, setSelectedCurrency] = useState<string>('USD') // 默认美元，但支持人民币
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([])
   
   // 预算计算配置（支持多币种）
   const [budgetConfig, setBudgetConfig] = useState({
     birdViewPrice: 1600, // 鸟瞰图单价
+    halfBirdViewPrice: 1200, // 半鸟瞰图单价
     humanViewPrice: 800, // 人视角单价
     animationPrice: 140, // 动画单价/秒
     birdViewDiscount: 100, // 鸟瞰图折扣百分比
+    halfBirdViewDiscount: 100, // 半鸟瞰图折扣百分比
     humanViewDiscount: 100, // 人视角折扣百分比
     animationDiscount: 100, // 动画折扣百分比
-    currency: 'USD' // 默认美元
+    currency: 'USD' // 默认美元，支持切换到人民币等其他币种
   })
   
   // 图量信息
   const [imageQuantity, setImageQuantity] = useState({
     birdViewCount: 0,
+    halfBirdViewCount: 0, // 新增半鸟瞰数量
     humanViewCount: 0,
     animationDuration: 0,
   })
 
   // 团队分配状态
-  const [teamAssignments, setTeamAssignments] = useState<{
-    manager: TeamMember[]
-    sales: TeamMember[]
-    modeling: TeamMember[]
-    rendering: TeamMember[]
-  }>({
-    manager: [],
-    sales: [],
-    modeling: [],
-    rendering: [],
+  const [teamAssignments, setTeamAssignments] = useState({
+    manager: [] as TeamMember[],
+    sales: [] as TeamMember[],
+    modeling: [] as TeamMember[],
+    rendering: [] as TeamMember[],
   })
 
   // 部门成本状态
@@ -153,48 +162,63 @@ const CreateProject: React.FC = () => {
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([
     {
       id: '1',
-      phase: '项目报备',
+      title: '项目报备',
+      department: 'manager',
       startDate: '2025-06-02',
       endDate: '2025-06-05',
-      color: '#fa8c16',
-      autoSchedule: false,
       duration: 4, // 默认工期（天）
+      dependencies: [],
+      assignedTo: [],
+      status: 'pending',
+      progress: 0,
     },
     {
       id: '2', 
-      phase: '建模',
+      title: '建模',
+      department: 'modeling',
       startDate: '2025-06-06',
       endDate: '2025-06-07',
-      color: '#52c41a',
-      autoSchedule: true,
       duration: 2, // 默认2天
+      dependencies: [],
+      assignedTo: [],
+      status: 'pending',
+      progress: 0,
     },
     {
       id: '3',
-      phase: '渲染',
+      title: '渲染',
+      department: 'rendering',
       startDate: '2025-06-08', 
       endDate: '2025-06-09',
-      color: '#1890ff',
-      autoSchedule: true,
       duration: 2, // 默认2天
+      dependencies: [],
+      assignedTo: [],
+      status: 'pending',
+      progress: 0,
     },
     {
       id: '4',
-      phase: '出图',
+      title: '出图',
+      department: 'rendering',
       startDate: '2025-06-10',
       endDate: '2025-06-10',
-      color: '#722ed1',
-      autoSchedule: true,
       duration: 1, // 默认1天
+      dependencies: [],
+      assignedTo: [],
+      status: 'pending',
+      progress: 0,
     },
     {
       id: '5',
-      phase: '备份',
+      title: '备份',
+      department: 'rendering',
       startDate: '2025-06-11',
       endDate: '2025-06-17',
-      color: '#ff4d4f',
-      autoSchedule: true,
       duration: 7, // 默认7天
+      dependencies: [],
+      assignedTo: [],
+      status: 'pending',
+      progress: 0,
     },
   ])
 
@@ -203,8 +227,9 @@ const CreateProject: React.FC = () => {
     {
       id: 'client_001',
       companyName: 'URBIS',
-      companyNameCN: 'URBIS建筑设计',
       contactPerson: 'Sarah Johnson',
+      email: 'sarah.j@urbis.com',
+      phone: '+61 2 9876 5432',
       preferredCurrency: 'AUD',
       projectPreferences: {
         style: ['Modern', 'Commercial', 'Residential High-rise'],
@@ -216,8 +241,9 @@ const CreateProject: React.FC = () => {
     {
       id: 'client_002',
       companyName: 'Bathurst开发公司',
-      companyNameCN: 'Bathurst Development Corp',
       contactPerson: 'Michael Chen',
+      email: 'michael.c@bathurst.com',
+      phone: '+61 2 1234 5678',
       preferredCurrency: 'AUD',
       projectPreferences: {
         style: ['Contemporary', 'Mixed Use'],
@@ -229,8 +255,9 @@ const CreateProject: React.FC = () => {
     {
       id: 'client_003',
       companyName: 'NCCEC集团',
-      companyNameCN: 'NCCEC Group',
       contactPerson: 'David Liu',
+      email: 'david.l@nccec.com',
+      phone: '+1 202-555-0123',
       preferredCurrency: 'USD',
       projectPreferences: {
         style: ['Corporate', 'Office Building'],
@@ -242,8 +269,9 @@ const CreateProject: React.FC = () => {
     {
       id: 'client_004',
       companyName: 'Norwell置业',
-      companyNameCN: 'Norwell Properties',
       contactPerson: 'Emma Wilson',
+      email: 'emma.w@norwell.com',
+      phone: '+86 10 1234 5678',
       preferredCurrency: 'CNY',
       projectPreferences: {
         style: ['Luxury Residential', 'Villa'],
@@ -255,8 +283,9 @@ const CreateProject: React.FC = () => {
     {
       id: 'client_005',
       companyName: 'Olympic Club International',
-      companyNameCN: 'Olympic Club International',
       contactPerson: 'James Smith',
+      email: 'james.s@olympicclub.com',
+      phone: '+33 1 23 45 67 89',
       preferredCurrency: 'EUR',
       projectPreferences: {
         style: ['Sports Facility', 'Recreation Center'],
@@ -273,45 +302,36 @@ const CreateProject: React.FC = () => {
       id: 'TM001',
       name: '张建模',
       department: 'modeling',
-      unitPrice: 800,
-      priceType: 'fixed',
-      birdViewPrice: 1000,
-      humanViewPrice: 1200,
-      animationPrice: 1500,
+      position: '建模师',
+      hourlyRate: 80,
     },
     {
       id: 'TM002',
       name: '李渲染',
       department: 'rendering',
-      unitPrice: 1200,
-      priceType: 'fixed',
-      birdViewPrice: 1500,
-      humanViewPrice: 1800,
-      animationPrice: 2000,
+      position: '渲染师',
+      hourlyRate: 100,
     },
     {
       id: 'TM003',
       name: '王渲染',
       department: 'rendering',
-      unitPrice: 1000,
-      priceType: 'fixed',
-      birdViewPrice: 1200,
-      humanViewPrice: 1500,
-      animationPrice: 1800,
+      position: '渲染师',
+      hourlyRate: 90,
     },
     {
       id: 'TM004',
       name: '赵经理',
       department: 'manager',
-      unitPrice: 2,
-      priceType: 'percentage',
+      position: '项目经理',
+      hourlyRate: 150,
     },
     {
       id: 'TM005',
       name: '陈销售',
       department: 'sales',
-      unitPrice: 1,
-      priceType: 'percentage',
+      position: '销售',
+      hourlyRate: 50,
     }
   ])
 
@@ -345,14 +365,27 @@ const CreateProject: React.FC = () => {
 
   // 初始化汇率数据
   useEffect(() => {
-    const rates: ExchangeRate[] = [
-      { currency: '人民币', currencyCode: 'CNY', currencySymbol: '¥', rate: 1.00, flag: '🇨🇳' },
-      { currency: '美元', currencyCode: 'USD', currencySymbol: '$', rate: 7.24, flag: '🇺🇸' },
-      { currency: '澳元', currencyCode: 'AUD', currencySymbol: 'A$', rate: 4.78, flag: '🇦🇺' },
-      { currency: '欧元', currencyCode: 'EUR', currencySymbol: '€', rate: 7.85, flag: '🇪🇺' },
-    ]
+    // 使用新的汇率管理工具
+    const rates = getCurrentExchangeRates()
     setExchangeRates(rates)
-  }, [])
+    
+    // 检查是否为固定汇率模式
+    const isFixed = isFixedRateMode()
+    if (isFixed) {
+      message.info('当前处于固定汇率模式，汇率将使用系统设置的固定值')
+    }
+    
+    // 初始化表单字段默认值
+    if (!isEditMode) {
+      form.setFieldsValue({
+        birdViewCount: 0,
+        halfBirdViewCount: 0,
+        humanViewCount: 0,
+        animationDuration: 0,
+        projectBudget: 0
+      })
+    }
+  }, [isEditMode, form])
 
   // 检查是否为编辑模式
   useEffect(() => {
@@ -384,6 +417,7 @@ const CreateProject: React.FC = () => {
           endDate: project.deadline ? dayjs(project.deadline) : undefined,
           description: project.description || '',
           birdViewCount: project.birdViewCount || 0,
+          halfBirdViewCount: project.halfBirdViewCount || 0,
           humanViewCount: project.humanViewCount || 0,
           animationDuration: project.animationDuration || 0,
           projectBudget: project.budget,
@@ -430,26 +464,27 @@ const CreateProject: React.FC = () => {
       const currencyRate = exchangeRates.find(rate => rate.currencyCode === client.preferredCurrency)
       if (currencyRate) {
         // 根据不同币种设置合适的默认单价
-        let defaultPrices = { birdView: 1600, humanView: 800, animation: 140 }
+        let defaultPrices = { birdView: 1600, halfBirdView: 1200, humanView: 800, animation: 140 }
         
         switch (client.preferredCurrency) {
           case 'AUD':
-            defaultPrices = { birdView: 2400, humanView: 1200, animation: 210 } // 澳元单价
+            defaultPrices = { birdView: 2400, halfBirdView: 1800, humanView: 1200, animation: 210 } // 澳元单价
             break
           case 'EUR':
-            defaultPrices = { birdView: 1500, humanView: 750, animation: 130 } // 欧元单价
+            defaultPrices = { birdView: 1500, halfBirdView: 1125, humanView: 750, animation: 130 } // 欧元单价
             break
           case 'USD':
-            defaultPrices = { birdView: 1600, humanView: 800, animation: 140 } // 美元单价
+            defaultPrices = { birdView: 1600, halfBirdView: 1200, humanView: 800, animation: 140 } // 美元单价
             break
           case 'CNY':
-            defaultPrices = { birdView: 11600, humanView: 5800, animation: 1015 } // 人民币单价
+            defaultPrices = { birdView: 11600, halfBirdView: 8700, humanView: 5800, animation: 1015 } // 人民币单价
             break
         }
         
         setBudgetConfig(prev => ({
           ...prev,
           birdViewPrice: defaultPrices.birdView,
+          halfBirdViewPrice: defaultPrices.halfBirdView,
           humanViewPrice: defaultPrices.humanView,
           animationPrice: defaultPrices.animation,
           currency: client.preferredCurrency
@@ -525,8 +560,8 @@ const CreateProject: React.FC = () => {
 
   // 自动计算预算（支持多币种）
   const calculateBudget = () => {
-    const { birdViewCount, humanViewCount, animationDuration } = imageQuantity
-    const { birdViewPrice, humanViewPrice, animationPrice, birdViewDiscount, humanViewDiscount, animationDiscount, currency } = budgetConfig
+    const { birdViewCount, halfBirdViewCount, humanViewCount, animationDuration } = imageQuantity
+    const { birdViewPrice, halfBirdViewPrice, humanViewPrice, animationPrice, birdViewDiscount, halfBirdViewDiscount, humanViewDiscount, animationDiscount, currency } = budgetConfig
     
     // 获取当前币种的汇率
     const currencyRate = exchangeRates.find(rate => rate.currencyCode === currency)
@@ -534,11 +569,12 @@ const CreateProject: React.FC = () => {
     
     // 计算各项费用（原币种）
     const birdViewTotal = birdViewCount * birdViewPrice * (birdViewDiscount / 100)
+    const halfBirdViewTotal = halfBirdViewCount * halfBirdViewPrice * (halfBirdViewDiscount / 100)
     const humanViewTotal = humanViewCount * humanViewPrice * (humanViewDiscount / 100)
     const animationTotal = animationDuration * animationPrice * (animationDiscount / 100)
     
     // 总费用（原币种）
-    const totalOriginal = birdViewTotal + humanViewTotal + animationTotal
+    const totalOriginal = birdViewTotal + halfBirdViewTotal + humanViewTotal + animationTotal
     
     // 转换为人民币
     const totalCNY = totalOriginal * exchangeRate
@@ -586,40 +622,31 @@ const CreateProject: React.FC = () => {
     const costs: DepartmentCost[] = [
       {
         department: 'manager',
-        departmentName: '项目经理',
         members: teamAssignments.manager,
-        totalCost: teamAssignments.manager.reduce((sum, member) => 
-          sum + (projectBudget * member.unitPrice / 100), 0
-        )
+        hourlyRate: 150, // 项目经理的固定小时费率
+        estimatedHours: 10, // 项目经理的估计工时
+        totalCost: 150 * 10
       },
       {
         department: 'sales',
-        departmentName: '销售',
         members: teamAssignments.sales,
-        totalCost: teamAssignments.sales.reduce((sum, member) => 
-          sum + (projectBudget * member.unitPrice / 100), 0
-        )
+        hourlyRate: 50, // 销售人员的固定小时费率
+        estimatedHours: 5, // 销售人员的估计工时
+        totalCost: 50 * 5
       },
       {
         department: 'modeling',
-        departmentName: '建模',
         members: teamAssignments.modeling,
-        totalCost: teamAssignments.modeling.reduce((sum, member) => {
-          const birdViewCost = (member.assignedBirdView || 0) * (member.birdViewPrice || 800)
-          const humanViewCost = (member.assignedHumanView || 0) * (member.humanViewPrice || 800)
-          return sum + birdViewCost + humanViewCost
-        }, 0)
+        hourlyRate: 80, // 建模师的固定小时费率
+        estimatedHours: 100, // 建模师的估计工时
+        totalCost: 80 * 100
       },
       {
         department: 'rendering',
-        departmentName: '渲染',
         members: teamAssignments.rendering,
-        totalCost: teamAssignments.rendering.reduce((sum, member) => {
-          const birdViewCost = (member.assignedBirdView || 0) * (member.birdViewPrice || 1200)
-          const humanViewCost = (member.assignedHumanView || 0) * (member.humanViewPrice || 1200)
-          const animationCost = (member.assignedAnimation || 0) * (member.animationPrice || 200)
-          return sum + birdViewCost + humanViewCost + animationCost
-        }, 0)
+        hourlyRate: 100, // 渲染师的固定小时费率
+        estimatedHours: 200, // 渲染师的估计工时
+        totalCost: 100 * 200
       }
     ]
     
@@ -713,16 +740,32 @@ const CreateProject: React.FC = () => {
       const projectName = form.getFieldValue('projectName')
       const clientId = form.getFieldValue('clientId')
       const birdViewCount = form.getFieldValue('birdViewCount')
+      const halfBirdViewCount = form.getFieldValue('halfBirdViewCount')
       const humanViewCount = form.getFieldValue('humanViewCount')
       const animationDuration = form.getFieldValue('animationDuration')
       const projectBudget = form.getFieldValue('projectBudget')
+      
+      console.log('验证数据:', {
+        protocolNumber,
+        projectName,
+        clientId,
+        birdViewCount,
+        halfBirdViewCount,
+        humanViewCount,
+        animationDuration,
+        projectBudget
+      })
       
       if (!protocolNumber || !projectName || !clientId) {
         message.error('请完善项目基本信息')
         return
       }
       
-      if (birdViewCount === undefined || humanViewCount === undefined || animationDuration === undefined) {
+      // 修复验证逻辑：允许0值，只检查null和undefined
+      if (birdViewCount === null || birdViewCount === undefined || 
+          halfBirdViewCount === null || halfBirdViewCount === undefined || 
+          humanViewCount === null || humanViewCount === undefined || 
+          animationDuration === null || animationDuration === undefined) {
         message.error('请完善项目图量设置')
         return
       }
@@ -779,6 +822,7 @@ const CreateProject: React.FC = () => {
       startDate: form.getFieldValue('startDate')?.format('YYYY-MM-DD'),
       description: form.getFieldValue('description'),
       birdViewCount: form.getFieldValue('birdViewCount'),
+      halfBirdViewCount: form.getFieldValue('halfBirdViewCount'),
       humanViewCount: form.getFieldValue('humanViewCount'),
       animationDuration: form.getFieldValue('animationDuration'),
       teamAssignments,
@@ -832,13 +876,17 @@ const CreateProject: React.FC = () => {
   // 如果正在加载，显示加载指示器
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '50vh'
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '60vh',
+        flexDirection: 'column'
       }}>
-        <Spin size="large" tip={`正在加载${isEditMode ? '项目' : '创建'}信息...`} />
+        <Spin size="large" />
+        <div style={{ marginTop: 16, color: '#666' }}>
+          {`正在加载${isEditMode ? '项目' : '创建'}信息...`}
+        </div>
       </div>
     )
   }

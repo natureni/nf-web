@@ -22,10 +22,6 @@ const ClientSearchFilters: React.FC<ClientSearchFiltersProps> = ({
     onFiltersChange({ ...filters, searchText: value })
   }
 
-  const handleRegionChange = (value: string) => {
-    onFiltersChange({ ...filters, regionFilter: value })
-  }
-
   const handleStatusChange = (value: string) => {
     onFiltersChange({ ...filters, statusFilter: value })
   }
@@ -43,20 +39,6 @@ const ClientSearchFilters: React.FC<ClientSearchFiltersProps> = ({
               style={{ width: 300 }}
               allowClear
             />
-            
-            <Select
-              placeholder="选择地区"
-              value={filters.regionFilter || undefined}
-              onChange={handleRegionChange}
-              style={{ width: 180 }}
-              allowClear
-            >
-              <Option value="Asia-Pacific">Asia-Pacific 亚太地区</Option>
-              <Option value="North-America">North-America 北美</Option>
-              <Option value="Europe">Europe 欧洲</Option>
-              <Option value="Middle-East">Middle-East 中东</Option>
-              <Option value="Other">Other 其他</Option>
-            </Select>
             
             <Select
               placeholder="选择状态"

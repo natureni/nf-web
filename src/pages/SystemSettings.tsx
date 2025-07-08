@@ -46,17 +46,20 @@ interface SystemSettings {
   autoUpdate: boolean
   baseCurrency: string
   lastSyncTime?: string
+  fixedRateMode: boolean // 新增：固定汇率模式
 }
 
 const SystemSettings: React.FC = () => {
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(false)
+  const [fixedRateMode, setFixedRateMode] = useState(false) // 新增：固定汇率模式状态
 
   // 默认汇率数据（相对于人民币CNY）
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([
-    // 主要货币
+    // 主要货币 - 按优先级排序：美元、人民币、澳元
     { currency: '美元', currencyCode: 'USD', currencySymbol: '$', rate: 7.24, region: '美国', flag: '🇺🇸' },
+    { currency: '人民币', currencyCode: 'CNY', currencySymbol: '¥', rate: 1.00, region: '中国', flag: '🇨🇳' },
     { currency: '澳大利亚元', currencyCode: 'AUD', currencySymbol: 'A$', rate: 4.78, region: '澳大利亚', flag: '🇦🇺' },
     { currency: '欧元', currencyCode: 'EUR', currencySymbol: '€', rate: 7.85, region: '欧盟', flag: '🇪🇺' },
     { currency: '英镑', currencyCode: 'GBP', currencySymbol: '£', rate: 9.12, region: '英国', flag: '🇬🇧' },
@@ -102,15 +105,47 @@ const SystemSettings: React.FC = () => {
         exchangeRates: updatedRates,
         autoUpdate: autoUpdateEnabled,
         baseCurrency: 'CNY',
-        lastSyncTime: new Date().toISOString()
+        lastSyncTime: new Date().toISOString(),
+        fixedRateMode // 保存固定汇率模式设置
       }
       localStorage.setItem('systemSettings', JSON.stringify(settings))
       
+      // 同时更新汇率工具的设置
+      const { saveSystemSettings } = await import('../utils/exchangeRates')
+      saveSystemSettings(settings)
+      
       message.success('汇率设置保存成功！')
     } catch (error) {
+      console.error('保存失败:', error)
       message.error('保存失败，请检查输入格式')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 处理固定汇率模式切换
+  const handleFixedRateModeChange = async (checked: boolean) => {
+    setFixedRateMode(checked)
+    
+    // 立即保存设置
+    try {
+      const settings: SystemSettings = {
+        exchangeRates,
+        autoUpdate: autoUpdateEnabled,
+        baseCurrency: 'CNY',
+        lastSyncTime: new Date().toISOString(),
+        fixedRateMode: checked
+      }
+      localStorage.setItem('systemSettings', JSON.stringify(settings))
+      
+      // 同时更新汇率工具的设置
+      const { saveSystemSettings } = await import('../utils/exchangeRates')
+      saveSystemSettings(settings)
+      
+      message.success(checked ? '已启用固定汇率模式' : '已启用浮动汇率模式')
+    } catch (error) {
+      console.error('保存固定汇率模式失败:', error)
+      message.error('保存设置失败')
     }
   }
 
@@ -122,6 +157,11 @@ const SystemSettings: React.FC = () => {
 
   // 从API获取最新汇率（模拟）
   const handleSyncRates = async () => {
+    if (fixedRateMode) {
+      message.warning('当前处于固定汇率模式，无法同步汇率')
+      return
+    }
+    
     try {
       setLoading(true)
       message.loading('正在同步最新汇率...', 2)
@@ -156,23 +196,45 @@ const SystemSettings: React.FC = () => {
   // 初始化表单数据
   useEffect(() => {
     // 从本地存储加载设置
-    const savedSettings = localStorage.getItem('systemSettings')
-    if (savedSettings) {
+    const loadSettings = async () => {
       try {
-        const settings: SystemSettings = JSON.parse(savedSettings)
-        setExchangeRates(settings.exchangeRates)
+        // 使用汇率工具加载设置
+        const { getSystemSettings } = await import('../utils/exchangeRates')
+        const settings = getSystemSettings()
+        
+        // 确保包含人民币选项
+        const ratesWithCNY = settings.exchangeRates.some(rate => rate.currencyCode === 'CNY')
+          ? settings.exchangeRates
+          : [
+              { currency: '人民币', currencyCode: 'CNY', currencySymbol: '¥', rate: 1.00, region: '中国', flag: '🇨🇳' },
+              ...settings.exchangeRates
+            ]
+        
+        setExchangeRates(ratesWithCNY)
         setAutoUpdateEnabled(settings.autoUpdate)
+        setFixedRateMode(settings.fixedRateMode || false)
+        
+        // 设置表单初始值
+        const initialValues: any = {}
+        ratesWithCNY.forEach(rate => {
+          initialValues[rate.currencyCode] = rate.rate
+        })
+        form.setFieldsValue(initialValues)
+        
+        console.log('系统设置加载成功:', settings)
       } catch (error) {
         console.error('加载设置失败:', error)
+        
+        // 使用默认设置
+        const initialValues: any = {}
+        exchangeRates.forEach(rate => {
+          initialValues[rate.currencyCode] = rate.rate
+        })
+        form.setFieldsValue(initialValues)
       }
     }
-
-    // 设置初始表单值
-    const initialValues: any = {}
-    exchangeRates.forEach(rate => {
-      initialValues[rate.currencyCode] = rate.rate
-    })
-    form.setFieldsValue(initialValues)
+    
+    loadSettings()
   }, [])
 
   // 汇率表格列定义
@@ -248,6 +310,12 @@ const SystemSettings: React.FC = () => {
               checkedChildren="自动更新"
               unCheckedChildren="手动更新"
             />
+            <Switch
+              checked={fixedRateMode}
+              onChange={handleFixedRateModeChange}
+              checkedChildren="固定汇率"
+              unCheckedChildren="浮动汇率"
+            />
           </Space>
         </div>
       </div>
@@ -283,6 +351,7 @@ const SystemSettings: React.FC = () => {
                           icon={<ReloadOutlined />}
                           onClick={handleSyncRates}
                           loading={loading}
+                          disabled={fixedRateMode} // 固定汇率模式下禁用同步
                         >
                           同步最新汇率
                         </Button>
@@ -305,9 +374,13 @@ const SystemSettings: React.FC = () => {
                     style={{ marginBottom: 24 }}
                   >
                     <Alert
-                      message="汇率说明"
-                      description="当前汇率均相对于人民币(CNY)。修改汇率后请点击保存。系统支持自动同步最新汇率。"
-                      type="info"
+                      message={fixedRateMode ? "固定汇率模式" : "汇率说明"}
+                      description={
+                        fixedRateMode 
+                          ? "当前处于固定汇率模式，汇率将不会自动更新。您可以手动修改汇率并保存。如需启用自动更新，请关闭固定汇率模式。"
+                          : "当前汇率均相对于人民币(CNY)。修改汇率后请点击保存。系统支持自动同步最新汇率。"
+                      }
+                      type={fixedRateMode ? "warning" : "info"}
                       showIcon
                       style={{ marginBottom: 24 }}
                     />
@@ -316,10 +389,15 @@ const SystemSettings: React.FC = () => {
                       {/* 主要货币 */}
                       <Divider orientation="left">
                         <GlobalOutlined /> 主要货币
+                        {fixedRateMode && (
+                          <Tag color="orange" style={{ marginLeft: 8 }}>
+                            固定汇率
+                          </Tag>
+                        )}
                       </Divider>
                       <Row gutter={16}>
                         {exchangeRates
-                          .filter(rate => ['USD', 'AUD', 'EUR', 'GBP', 'CAD', 'NZD'].includes(rate.currencyCode))
+                          .filter(rate => ['USD', 'CNY', 'AUD', 'EUR', 'GBP', 'CAD', 'NZD'].includes(rate.currencyCode))
                           .map(rate => (
                             <Col span={8} key={rate.currencyCode}>
                               <Form.Item
@@ -344,6 +422,7 @@ const SystemSettings: React.FC = () => {
                                   step={0.01}
                                   addonBefore={rate.currencySymbol}
                                   addonAfter="¥"
+                                  disabled={rate.currencyCode === 'CNY'} // 人民币汇率固定为1.0
                                 />
                               </Form.Item>
                             </Col>
@@ -427,52 +506,32 @@ const SystemSettings: React.FC = () => {
                   </Card>
                 </Col>
 
-                {/* 汇率监控面板 */}
+                {/* 汇率表格 */}
                 <Col span={10}>
-                  <Card 
+                  <Card
                     title={
                       <Space>
                         <EuroOutlined />
-                        汇率监控
+                        汇率表格
                       </Space>
                     }
                     style={{ marginBottom: 24 }}
                   >
                     <Table
-                      columns={rateColumns}
                       dataSource={exchangeRates}
-                      pagination={{ pageSize: 8 }}
-                      size="small"
+                      columns={rateColumns}
                       rowKey="currencyCode"
+                      pagination={false}
                     />
                   </Card>
                 </Col>
               </Row>
-            )
-          },
-          {
-            key: 'system',
-            label: (
-              <span>
-                <GlobalOutlined />
-                系统配置
-              </span>
             ),
-            children: (
-              <Card title="系统配置" style={{ marginBottom: 24 }}>
-                <Alert
-                  message="功能开发中"
-                  description="更多系统配置功能正在开发中，敬请期待。"
-                  type="info"
-                  showIcon
-                />
-              </Card>
-            )
-          }
+          },
         ]}
       />
     </div>
   )
 }
 
-export default SystemSettings 
+export default SystemSettings

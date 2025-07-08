@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Layout, Menu, Typography, Space, Breadcrumb, Alert, Spin } from 'antd'
 import {
@@ -47,7 +47,7 @@ const AppContent: React.FC = () => {
         minHeight: '100vh',
         background: '#f0f2f5'
       }}>
-        <Spin size="large" tip="系统初始化中..." />
+        <Spin size="large" />
       </div>
     )
   }
@@ -73,7 +73,7 @@ const AppContent: React.FC = () => {
         module: 'projects' as const,
         children: [
           {
-            key: '/projects',
+            key: '/projects/list',
             label: '项目列表',
             module: 'projects' as const
           },
@@ -134,8 +134,41 @@ const AppContent: React.FC = () => {
 
   const filteredMenuItems = getFilteredMenuItems()
 
+  // 获取面包屑导航项
+  const getBreadcrumbItems = () => {
+    const items = [
+      {
+        title: '首页',
+        href: '/'
+      }
+    ]
+
+    const pathTitleMap: { [key: string]: string } = {
+      '/': '工作台',
+      '/projects': '项目管理',
+      '/gantt': '甘特图',
+      '/clients': '客户管理',
+      '/finance': '财务管理',
+      '/team': '团队管理',
+      '/permissions': '权限管理',
+      '/settings': '系统设置'
+    }
+
+    const currentTitle = pathTitleMap[window.location.pathname] || '页面'
+    items.push({
+      title: currentTitle
+    })
+
+    return items
+  }
+
   return (
-    <Router>
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true
+      }}
+    >
       <Layout style={{ minHeight: '100vh' }}>
         <Sider 
           trigger={null} 
@@ -178,7 +211,12 @@ const AppContent: React.FC = () => {
               }))
             }))}
             onClick={({ key }) => {
-              window.location.href = key
+              // 处理项目列表的特殊路由
+              if (key === '/projects/list') {
+                window.location.href = '/projects'
+              } else {
+                window.location.href = key
+              }
             }}
           />
         </Sider>
@@ -219,19 +257,7 @@ const AppContent: React.FC = () => {
                 {collapsed ? '▶' : '◀'}
               </button>
               
-              <Breadcrumb>
-                <Breadcrumb.Item href="/">首页</Breadcrumb.Item>
-                <Breadcrumb.Item>
-                  {window.location.pathname === '/' ? '工作台' : 
-                   window.location.pathname === '/projects' ? '项目管理' :
-                   window.location.pathname === '/gantt' ? '甘特图' :
-                   window.location.pathname === '/clients' ? '客户管理' :
-                   window.location.pathname === '/finance' ? '财务管理' :
-                   window.location.pathname === '/team' ? '团队管理' :
-                   window.location.pathname === '/permissions' ? '权限管理' :
-                   window.location.pathname === '/settings' ? '系统设置' : '页面'}
-                </Breadcrumb.Item>
-              </Breadcrumb>
+              <Breadcrumb items={getBreadcrumbItems()} />
             </Space>
 
             <Space>
@@ -402,6 +428,32 @@ const AppContent: React.FC = () => {
 
 // 主应用组件
 const App: React.FC = () => {
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    // 模拟系统初始化
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh',
+        flexDirection: 'column'
+      }}>
+        <Spin size="large" />
+        <div style={{ marginTop: 16, color: '#666' }}>系统初始化中...</div>
+      </div>
+    )
+  }
+
   return (
     <AuthProvider>
       <AppContent />

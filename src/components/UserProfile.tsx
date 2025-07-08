@@ -72,7 +72,7 @@ const UserProfile: React.FC = () => {
 
   return (
     <>
-      <Dropdown overlay={menu} trigger={['click']} placement="bottomRight">
+      <Dropdown menu={menu} trigger={['click']} placement="bottomRight">
         <div style={{ 
           cursor: 'pointer', 
           padding: '4px 8px',

@@ -15,8 +15,9 @@ export interface TeamMember {
   idCard: string
   unitPrice: number // 工作量单价（按项目计算）或百分比
   priceType: 'fixed' | 'percentage' // 'fixed'表示固定单价，'percentage'表示百分比
-  // 新增4种单价类型
+  // 新增5种单价类型
   birdViewPrice?: number // 鸟瞰单价
+  halfBirdViewPrice?: number // 半鸟瞰单价
   humanViewPrice?: number // 人视角单价
   animationPrice?: number // 动画单价（每秒）
   customPrice?: number // 自定义单价

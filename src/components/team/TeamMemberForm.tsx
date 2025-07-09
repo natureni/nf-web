@@ -30,7 +30,14 @@ const TeamMemberForm: React.FC<TeamMemberFormProps> = ({
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields()
-      onSubmit(values)
+      
+      // 为unitPrice设置默认值，避免验证错误
+      const submissionValues = {
+        ...values,
+        unitPrice: values.unitPrice || 0 // 设置默认值
+      }
+      
+      onSubmit(submissionValues)
       form.resetFields()
       onClose()
     } catch (error) {
@@ -93,42 +100,16 @@ const TeamMemberForm: React.FC<TeamMemberFormProps> = ({
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item dependencies={['department']} noStyle>
-              {({ getFieldValue }) => {
-                const department = getFieldValue('department')
-                const isPercentage = department === 'manager' || department === 'sales'
-                
-                return (
-                  <Form.Item 
-                    name="unitPrice" 
-                    label={
-                      isPercentage 
-                        ? "项目金额百分比(%)" 
-                        : department === 'rendering' || department === 'modeling'
-                          ? "工作量单价(元/工作量)"
-                          : "项目单价(元/项目)"
-                    } 
-                    rules={[{ required: true, message: '请输入单价' }]}
-                  >
-                    <InputNumber 
-                      min={0} 
-                      max={isPercentage ? 100 : undefined}
-                      style={{ width: '100%' }} 
-                      placeholder={
-                        isPercentage 
-                          ? "输入百分比，如：2" 
-                          : "输入金额"
-                      }
-                    />
-                  </Form.Item>
-                )
-              }}
-            </Form.Item>
+            {/* 预留空间或其他字段 */}
           </Col>
         </Row>
 
         <Form.Item name="priceType" style={{ display: 'none' }}>
           <Input />
+        </Form.Item>
+
+        <Form.Item name="unitPrice" style={{ display: 'none' }}>
+          <InputNumber />
         </Form.Item>
 
         <Form.Item name="idCard" label="身份证信息" rules={[{ required: true, message: '请输入身份证信息' }]}>
@@ -150,12 +131,17 @@ const TeamMemberForm: React.FC<TeamMemberFormProps> = ({
                 <>
                   <div style={{ margin: '16px 0', fontWeight: 500, color: '#1890ff' }}>详细单价设置</div>
                   <Row gutter={16}>
-                    <Col span={12}>
+                    <Col span={8}>
                       <Form.Item name="birdViewPrice" label="鸟瞰单价(元/张)">
                         <InputNumber min={0} style={{ width: '100%' }} placeholder="如: 1000" />
                       </Form.Item>
                     </Col>
-                    <Col span={12}>
+                    <Col span={8}>
+                      <Form.Item name="halfBirdViewPrice" label="半鸟瞰单价(元/张)">
+                        <InputNumber min={0} style={{ width: '100%' }} placeholder="如: 800" />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
                       <Form.Item name="humanViewPrice" label="人视角单价(元/张)">
                         <InputNumber min={0} style={{ width: '100%' }} placeholder="如: 1200" />
                       </Form.Item>
@@ -180,12 +166,17 @@ const TeamMemberForm: React.FC<TeamMemberFormProps> = ({
                 <>
                   <div style={{ margin: '16px 0', fontWeight: 500, color: '#1890ff' }}>提成比例设置</div>
                   <Row gutter={16}>
-                    <Col span={12}>
+                    <Col span={8}>
                       <Form.Item name="birdViewPrice" label="鸟瞰提成比例(%)">
                         <InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="如: 1" step={0.01} />
                       </Form.Item>
                     </Col>
-                    <Col span={12}>
+                    <Col span={8}>
+                      <Form.Item name="halfBirdViewPrice" label="半鸟瞰提成比例(%)">
+                        <InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="如: 0.8" step={0.01} />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
                       <Form.Item name="humanViewPrice" label="人视角提成比例(%)">
                         <InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="如: 2" step={0.01} />
                       </Form.Item>
@@ -212,8 +203,19 @@ const TeamMemberForm: React.FC<TeamMemberFormProps> = ({
 
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="paymentCycle" label="出图后打款周期(天)" rules={[{ required: true, message: '请输入打款周期' }]}>
-              <InputNumber min={1} max={365} style={{ width: '100%' }} placeholder="请输入天数" />
+            <Form.Item 
+              name="paymentCycle" 
+              label="出图后打款周期(天)" 
+              rules={[{ required: true, message: '请输入打款周期' }]}
+              tooltip="项目出图完成后，多少天内完成打款"
+            >
+              <InputNumber 
+                min={1} 
+                max={365} 
+                style={{ width: '100%' }} 
+                placeholder="请输入天数，如：30" 
+                addonAfter="天"
+              />
             </Form.Item>
           </Col>
           <Col span={12}>

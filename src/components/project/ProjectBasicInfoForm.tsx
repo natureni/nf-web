@@ -3,6 +3,7 @@ import { Form, Input, Select, DatePicker, InputNumber, Checkbox, Row, Col, Card,
 import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons'
 import { Project } from '../../types/project'
 import { Client } from '../../types/client'
+import { getProjectExchangeRates, getRateModeDescription } from '../../utils/exchangeRates'
 
 const { Option } = Select
 const { TextArea } = Input
@@ -10,11 +11,20 @@ const { TextArea } = Input
 interface ProjectBasicInfoFormProps {
   form: any
   currentProject?: Project | null
+  imageQuantities?: {
+    birdView: number
+    halfBirdView: number
+    humanView: number
+    animation: number
+  }
+  onImageQuantitiesChange?: (quantities: any) => void
 }
 
 const ProjectBasicInfoForm: React.FC<ProjectBasicInfoFormProps> = ({
   form,
-  currentProject
+  currentProject,
+  imageQuantities: propImageQuantities,
+  onImageQuantitiesChange
 }) => {
   const [paymentStatus, setPaymentStatus] = useState<string>('unpaid')
   const [clients, setClients] = useState<Client[]>([])
@@ -47,6 +57,105 @@ const ProjectBasicInfoForm: React.FC<ProjectBasicInfoFormProps> = ({
   ])
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [newProjectType, setNewProjectType] = useState('')
+
+  // 图量设置状态
+  const [imageQuantities, setImageQuantities] = useState({
+    birdView: 1,
+    halfBirdView: 2,
+    humanView: 2,
+    animation: 30
+  })
+
+  // 使用props传入的图量数据，如果没有则使用默认值
+  const currentImageQuantities = propImageQuantities || imageQuantities
+
+  // 更新图量数据的函数
+  const updateImageQuantities = (newQuantities: any) => {
+    setImageQuantities(newQuantities)
+    if (onImageQuantitiesChange) {
+      onImageQuantitiesChange(newQuantities)
+    }
+  }
+
+  // 折扣设置状态
+  const [discounts, setDiscounts] = useState({
+    humanView: 0,
+    halfBirdView: 0,
+    birdView: 0,
+    animation: 0,
+    total: 0
+  })
+
+  // 当前选择的货币
+  const [selectedCurrency, setSelectedCurrency] = useState('USD')
+
+  // 标准单价（美元基准）
+  const basePrices = {
+    humanView: 800,
+    halfBirdView: 1200,
+    birdView: 1600,
+    animation: 170
+  }
+
+  // 获取当前货币的单价
+  const getCurrentPrices = () => {
+    const exchangeRates = getProjectExchangeRates()
+    const usdRate = exchangeRates.find(rate => rate.currencyCode === 'USD')?.rate || 7.2
+    const currentRate = exchangeRates.find(rate => rate.currencyCode === selectedCurrency)?.rate || 1
+    
+    // 如果选择的是美元，直接使用基准价格
+    if (selectedCurrency === 'USD') {
+      return basePrices
+    }
+    
+    // 其他货币换算：美元价格 × 美元汇率 ÷ 目标货币汇率
+    const conversionFactor = usdRate / currentRate
+    
+    return {
+      humanView: Math.round(basePrices.humanView * conversionFactor),
+      halfBirdView: Math.round(basePrices.halfBirdView * conversionFactor),
+      birdView: Math.round(basePrices.birdView * conversionFactor),
+      animation: Math.round(basePrices.animation * conversionFactor)
+    }
+  }
+
+  // 计算基于图量的预算（目标货币）
+  const calculateBudgetFromImages = (): number => {
+    const prices = getCurrentPrices()
+    
+    // 计算各项小计（应用单项折扣）
+    const humanViewTotal = currentImageQuantities.humanView * prices.humanView * (1 - discounts.humanView / 100)
+    const halfBirdViewTotal = currentImageQuantities.halfBirdView * prices.halfBirdView * (1 - discounts.halfBirdView / 100)
+    const birdViewTotal = currentImageQuantities.birdView * prices.birdView * (1 - discounts.birdView / 100)
+    const animationTotal = currentImageQuantities.animation * prices.animation * (1 - discounts.animation / 100)
+    
+    // 小计总和
+    const subtotal = humanViewTotal + halfBirdViewTotal + birdViewTotal + animationTotal
+    
+    // 应用总折扣
+    const finalTotal = subtotal * (1 - discounts.total / 100)
+    
+    return Math.round(finalTotal)
+  }
+
+  // 计算人民币总计
+  const calculateCNYTotal = (): number => {
+    // 先计算美元总计
+    const usdPrices = basePrices
+    const humanViewUSD = currentImageQuantities.humanView * usdPrices.humanView * (1 - discounts.humanView / 100)
+    const halfBirdViewUSD = currentImageQuantities.halfBirdView * usdPrices.halfBirdView * (1 - discounts.halfBirdView / 100)
+    const birdViewUSD = currentImageQuantities.birdView * usdPrices.birdView * (1 - discounts.birdView / 100)
+    const animationUSD = currentImageQuantities.animation * usdPrices.animation * (1 - discounts.animation / 100)
+    
+    const subtotalUSD = humanViewUSD + halfBirdViewUSD + birdViewUSD + animationUSD
+    const finalTotalUSD = subtotalUSD * (1 - discounts.total / 100)
+    
+    // 转换为人民币：美元金额 × 美元汇率
+    const exchangeRates = getProjectExchangeRates()
+    const usdRate = exchangeRates.find(rate => rate.currencyCode === 'USD')?.rate || 7.2
+    
+    return Math.round(finalTotalUSD * usdRate)
+  }
 
   // 获取客户数据（从客户管理模块）
   useEffect(() => {
@@ -267,6 +376,14 @@ const ProjectBasicInfoForm: React.FC<ProjectBasicInfoFormProps> = ({
     }
   }, [form])
 
+  // 监听表单货币变化
+  useEffect(() => {
+    const formCurrency = form.getFieldValue('currency')
+    if (formCurrency) {
+      setSelectedCurrency(formCurrency)
+    }
+  }, [form])
+
   // 删除项目类型选项
   const handleDeleteProjectType = (typeToDelete: string) => {
     const updatedTypes = projectTypeOptions.filter(type => type !== typeToDelete)
@@ -293,6 +410,13 @@ const ProjectBasicInfoForm: React.FC<ProjectBasicInfoFormProps> = ({
     setNewProjectType('')
     setEditModalVisible(false)
     message.success(`已添加项目类型："${newProjectType.trim()}"`)
+  }
+
+  // 获取货币符号
+  const getCurrencySymbol = (currencyCode: string): string => {
+    const exchangeRates = getProjectExchangeRates()
+    const currency = exchangeRates.find(rate => rate.currencyCode === currencyCode)
+    return currency?.currencySymbol || '$'
   }
 
   return (
@@ -354,7 +478,7 @@ const ProjectBasicInfoForm: React.FC<ProjectBasicInfoFormProps> = ({
                       </div>
                       <div style={{ marginLeft: 'auto' }}>
                         {client.tags.slice(0, 2).map(tag => (
-                          <Tag key={tag} size="small" color="blue">{tag}</Tag>
+                          <Tag key={tag} color="blue">{tag}</Tag>
                         ))}
                       </div>
                     </div>
@@ -383,7 +507,6 @@ const ProjectBasicInfoForm: React.FC<ProjectBasicInfoFormProps> = ({
               rules={[{ required: true, message: '请输入或选择项目类型' }]}
             >
               <Select
-                mode="combobox"
                 placeholder="请输入或选择项目类型"
                 showSearch
                 filterOption={(input, option) =>
@@ -401,25 +524,11 @@ const ProjectBasicInfoForm: React.FC<ProjectBasicInfoFormProps> = ({
         <Row gutter={24}>
           <Col span={12}>
             <Form.Item
-              label="项目预算"
-              name="budget"
-              rules={[{ required: true, message: '请输入项目预算' }]}
-            >
-              <InputNumber
-                style={{ width: '100%' }}
-                placeholder="请输入预算金额"
-                min={0}
-                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
               label="项目货币"
               name="currency"
               rules={[{ required: true, message: '请选择货币类型' }]}
             >
-              <Select placeholder="选择货币">
+              <Select placeholder="选择货币" onChange={setSelectedCurrency}>
                 <Option value="CNY">人民币 (CNY)</Option>
                 <Option value="USD">美元 (USD)</Option>
                 <Option value="AUD">澳元 (AUD)</Option>
@@ -431,9 +540,158 @@ const ProjectBasicInfoForm: React.FC<ProjectBasicInfoFormProps> = ({
               </Select>
             </Form.Item>
           </Col>
-        </Row>
-
-        <Row gutter={24}>
+          
+          {/* 图量预算计算器 */}
+          <Col span={24}>
+            <Card 
+              size="small" 
+              title={
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>图量预算计算器</span>
+                  <Tag color="blue">{getRateModeDescription()}</Tag>
+                </div>
+              }
+              style={{ marginBottom: 16, backgroundColor: '#f8f9fa' }}
+            >
+              <Row gutter={16} style={{ marginBottom: 16 }}>
+                <Col span={4}>
+                  <div style={{ marginBottom: 8 }}>
+                    <Tag color="blue">人视角</Tag>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                      {getCurrencySymbol(selectedCurrency)}{getCurrentPrices().humanView}/张
+                    </div>
+                  </div>
+                  <InputNumber
+                    value={currentImageQuantities.humanView}
+                    onChange={(value) => updateImageQuantities({ ...currentImageQuantities, humanView: value || 0 })}
+                    min={0}
+                    style={{ width: '100%', marginBottom: 8 }}
+                    addonAfter="张"
+                  />
+                  <InputNumber
+                    value={discounts.humanView}
+                    onChange={(value) => setDiscounts(prev => ({ ...prev, humanView: value || 0 }))}
+                    min={0}
+                    max={100}
+                    style={{ width: '100%' }}
+                    addonAfter="%"
+                    placeholder="折扣"
+                  />
+                </Col>
+                <Col span={4}>
+                  <div style={{ marginBottom: 8 }}>
+                    <Tag color="orange">半鸟瞰</Tag>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                      {getCurrencySymbol(selectedCurrency)}{getCurrentPrices().halfBirdView}/张
+                    </div>
+                  </div>
+                  <InputNumber
+                    value={currentImageQuantities.halfBirdView}
+                    onChange={(value) => updateImageQuantities({ ...currentImageQuantities, halfBirdView: value || 0 })}
+                    min={0}
+                    style={{ width: '100%', marginBottom: 8 }}
+                    addonAfter="张"
+                  />
+                  <InputNumber
+                    value={discounts.halfBirdView}
+                    onChange={(value) => setDiscounts(prev => ({ ...prev, halfBirdView: value || 0 }))}
+                    min={0}
+                    max={100}
+                    style={{ width: '100%' }}
+                    addonAfter="%"
+                    placeholder="折扣"
+                  />
+                </Col>
+                <Col span={4}>
+                  <div style={{ marginBottom: 8 }}>
+                    <Tag color="red">鸟瞰</Tag>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                      {getCurrencySymbol(selectedCurrency)}{getCurrentPrices().birdView}/张
+                    </div>
+                  </div>
+                  <InputNumber
+                    value={currentImageQuantities.birdView}
+                    onChange={(value) => updateImageQuantities({ ...currentImageQuantities, birdView: value || 0 })}
+                    min={0}
+                    style={{ width: '100%', marginBottom: 8 }}
+                    addonAfter="张"
+                  />
+                  <InputNumber
+                    value={discounts.birdView}
+                    onChange={(value) => setDiscounts(prev => ({ ...prev, birdView: value || 0 }))}
+                    min={0}
+                    max={100}
+                    style={{ width: '100%' }}
+                    addonAfter="%"
+                    placeholder="折扣"
+                  />
+                </Col>
+                <Col span={4}>
+                  <div style={{ marginBottom: 8 }}>
+                    <Tag color="purple">动画</Tag>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                      {getCurrencySymbol(selectedCurrency)}{getCurrentPrices().animation}/秒
+                    </div>
+                  </div>
+                  <InputNumber
+                    value={currentImageQuantities.animation}
+                    onChange={(value) => updateImageQuantities({ ...currentImageQuantities, animation: value || 0 })}
+                    min={0}
+                    style={{ width: '100%', marginBottom: 8 }}
+                    addonAfter="秒"
+                  />
+                  <InputNumber
+                    value={discounts.animation}
+                    onChange={(value) => setDiscounts(prev => ({ ...prev, animation: value || 0 }))}
+                    min={0}
+                    max={100}
+                    style={{ width: '100%' }}
+                    addonAfter="%"
+                    placeholder="折扣"
+                  />
+                </Col>
+                <Col span={8}>
+                  <div style={{ marginBottom: 8 }}>
+                    <Tag color="green">预算总计</Tag>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                      总折扣：
+                      <InputNumber
+                        value={discounts.total}
+                        onChange={(value) => setDiscounts(prev => ({ ...prev, total: value || 0 }))}
+                        min={0}
+                        max={100}
+                        style={{ width: '60px', marginLeft: 4 }}
+                        size="small"
+                      />%
+                    </div>
+                  </div>
+                  <div style={{ 
+                    padding: '8px 12px', 
+                    backgroundColor: '#fff', 
+                    border: '1px solid #d9d9d9', 
+                    borderRadius: '6px',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: '#52c41a',
+                    marginBottom: 8
+                  }}>
+                    {getCurrencySymbol(selectedCurrency)}{calculateBudgetFromImages().toLocaleString()}
+                  </div>
+                  <div style={{ 
+                    padding: '6px 10px', 
+                    backgroundColor: '#fff2e8', 
+                    border: '1px solid #ffbb96', 
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    color: '#d46b08'
+                  }}>
+                    ¥{calculateCNYTotal().toLocaleString()}
+                  </div>
+                </Col>
+              </Row>
+            </Card>
+          </Col>
           <Col span={8}>
             <Form.Item
               label="项目状态"
@@ -526,7 +784,8 @@ const ProjectBasicInfoForm: React.FC<ProjectBasicInfoFormProps> = ({
                   prevValues.paidAmount !== currentValues.paidAmount
                 }>
                   {({ getFieldValue }) => {
-                    const budget = getFieldValue('budget') || 0
+                    // 使用人民币预算进行计算
+                    const budget = calculateCNYTotal() // 使用计算出的人民币总计
                     const paidAmount = getFieldValue('paidAmount') || 0
                     const remaining = budget - paidAmount
                     const percentage = budget > 0 ? ((paidAmount / budget) * 100).toFixed(1) : 0

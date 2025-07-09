@@ -70,34 +70,34 @@ const CreateProject: React.FC = () => {
       phase: '项目报备',
       startDate: dayjs().format('YYYY-MM-DD'),
       endDate: dayjs().add(3, 'day').format('YYYY-MM-DD'),
-      color: '#fa8c16',
+      color: '#d9d9d9', // 灰色
       autoSchedule: false,
       duration: 4,
     },
     {
       id: '2', 
-      phase: '建模阶段',
+      phase: '项目建模',
       startDate: dayjs().add(4, 'day').format('YYYY-MM-DD'),
       endDate: dayjs().add(10, 'day').format('YYYY-MM-DD'),
-      color: '#52c41a',
+      color: '#fa8c16', // 橙色
       autoSchedule: true,
       duration: 7,
     },
     {
       id: '3',
-      phase: '渲染阶段',
+      phase: '项目渲染/动画',
       startDate: dayjs().add(11, 'day').format('YYYY-MM-DD'),
       endDate: dayjs().add(17, 'day').format('YYYY-MM-DD'),
-      color: '#1890ff',
+      color: '#52c41a', // 绿色 (渲染/动画)
       autoSchedule: true,
       duration: 7,
     },
     {
       id: '4',
-      phase: '出图交付',
+      phase: '项目出图',
       startDate: dayjs().add(18, 'day').format('YYYY-MM-DD'),
       endDate: dayjs().add(20, 'day').format('YYYY-MM-DD'),
-      color: '#722ed1',
+      color: '#ff4d4f', // 红色 (出图)
       autoSchedule: true,
       duration: 3,
     },

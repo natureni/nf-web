@@ -7,14 +7,21 @@ import {
   Card,
   message,
   Spin,
+  InputNumber,
+  Row,
+  Col,
+  Tag,
+  Upload,
 } from 'antd'
 import {
   ArrowLeftOutlined,
+  PictureOutlined,
+  UploadOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 
 // 导入类型定义
-import { Project, TeamMember, ScheduleItem } from '../types/project'
+import { Project, ProjectTeamMember, ScheduleItem } from '../types/project'
 
 // 导入组件
 import ProjectBasicInfoForm from '../components/project/ProjectBasicInfoForm'
@@ -31,10 +38,20 @@ const EditProject: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
 
-  // 团队成员数据
-  const [modelingMembers, setModelingMembers] = useState<TeamMember[]>([])
-  const [renderingMembers, setRenderingMembers] = useState<TeamMember[]>([])
-  const [animationMembers, setAnimationMembers] = useState<TeamMember[]>([])
+  // 团队成员数据 - 扩展为多个部门
+  const [modelingMembers, setModelingMembers] = useState<ProjectTeamMember[]>([])
+  const [renderingMembers, setRenderingMembers] = useState<ProjectTeamMember[]>([])
+  const [animationMembers, setAnimationMembers] = useState<ProjectTeamMember[]>([])
+  const [managerMembers, setManagerMembers] = useState<ProjectTeamMember[]>([])
+  const [salesMembers, setSalesMembers] = useState<ProjectTeamMember[]>([])
+
+  // 图量设置状态
+  const [imageQuantities, setImageQuantities] = useState({
+    birdView: 1,
+    halfBirdView: 2,
+    humanView: 2,
+    animation: 30
+  })
 
   // 项目时间安排数据
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([
@@ -43,47 +60,71 @@ const EditProject: React.FC = () => {
       phase: '项目报备',
       startDate: '2025-06-02',
       endDate: '2025-06-05',
-      color: '#fa8c16',
+      color: '#d9d9d9', // 灰色
       autoSchedule: false,
       duration: 4,
     },
     {
       id: '2', 
-      phase: '项目建模与设计',
+      phase: '项目建模',
       startDate: '2025-06-06',
       endDate: '2025-06-07',
-      color: '#52c41a',
+      color: '#fa8c16', // 橙色
       autoSchedule: true,
       duration: 2,
     },
     {
       id: '3',
-      phase: '项目制作设计',
+      phase: '项目渲染/动画',
       startDate: '2025-06-08', 
       endDate: '2025-06-12',
-      color: '#1890ff',
+      color: '#52c41a', // 绿色 (渲染/动画)
       autoSchedule: true,
       duration: 5,
     },
     {
       id: '4',
-      phase: '项目制作完善改造',
+      phase: '项目出图',
       startDate: '2025-06-13',
       endDate: '2025-06-19',
-      color: '#52c41a',
+      color: '#ff4d4f', // 红色 (出图)
       autoSchedule: true,
       duration: 7,
     },
     {
       id: '5',
-      phase: '项目发副总监',
+      phase: '项目暂停',
       startDate: '2025-06-20',
       endDate: '2025-06-28',
-      color: '#ff4d4f',
+      color: '#8c8c8c', // 浅灰色 (暂停)
       autoSchedule: true,
       duration: 9,
     },
   ])
+
+  // 计算基于图量的预算（从ProjectBasicInfoForm复制）
+  const calculateBudgetFromImages = (): number => {
+    // 标准单价（美元基准）
+    const basePrices = {
+      humanView: 800,
+      halfBirdView: 1200,
+      birdView: 1600,
+      animation: 170
+    }
+
+    // 计算美元总计
+    const humanViewUSD = imageQuantities.humanView * basePrices.humanView
+    const halfBirdViewUSD = imageQuantities.halfBirdView * basePrices.halfBirdView
+    const birdViewUSD = imageQuantities.birdView * basePrices.birdView
+    const animationUSD = imageQuantities.animation * basePrices.animation
+    
+    const totalUSD = humanViewUSD + halfBirdViewUSD + birdViewUSD + animationUSD
+    
+    // 转换为人民币：美元金额 × 美元汇率
+    const usdRate = 7.2 // 默认汇率，实际应该从汇率系统获取
+    
+    return Math.round(totalUSD * usdRate)
+  }
 
   // 获取所有项目数据
   const getAllProjects = (): Project[] => {
@@ -120,10 +161,10 @@ const EditProject: React.FC = () => {
         client: 'NCCEC集团',
         status: 'modeling',
         deadline: '2025-04-20',
-        budget: 68000,
+        budget: 68400,
         currency: 'USD',
         exchangeRate: 7.24,
-        budgetCNY: 492320,
+        budgetCNY: 495216,
         paymentStatus: 'partial',
         progress: 35,
         type: '办公建筑',
@@ -179,6 +220,90 @@ const EditProject: React.FC = () => {
     }
   }, [id])
 
+  // 处理图量分配
+  const handleImageQuantityDistribution = (distribution: any) => {
+    // 更新建模成员的工作量
+    const updatedModelingMembers = modelingMembers.map(member => ({
+      ...member,
+      assignedWorkload: distribution[member.id]?.modeling || member.assignedWorkload || 1
+    }))
+
+    // 更新渲染成员的工作量和具体分配
+    const updatedRenderingMembers = renderingMembers.map(member => {
+      const memberDistribution = distribution[member.id]
+      if (memberDistribution) {
+        return {
+          ...member,
+          assignedWorkload: (memberDistribution.birdView || 0) + (memberDistribution.halfBirdView || 0) + (memberDistribution.humanView || 0) || member.assignedWorkload || 1,
+          imageDistribution: {
+            birdView: memberDistribution.birdView || 0,
+            halfBirdView: memberDistribution.halfBirdView || 0,
+            humanView: memberDistribution.humanView || 0
+          }
+        }
+      }
+      return member
+    })
+
+    // 更新动画成员的工作量
+    const updatedAnimationMembers = animationMembers.map(member => ({
+      ...member,
+      assignedWorkload: distribution[member.id]?.animation || member.assignedWorkload || 1
+    }))
+
+    setModelingMembers(updatedModelingMembers)
+    setRenderingMembers(updatedRenderingMembers)
+    setAnimationMembers(updatedAnimationMembers)
+  }
+
+  // 智能分配算法
+  const smartDistribute = () => {
+    // 为建模成员分配工作量
+    const updatedModelingMembers = modelingMembers.map(member => ({
+      ...member,
+      birdViewWorkload: imageQuantities.birdView,
+      halfBirdViewWorkload: imageQuantities.halfBirdView,
+      humanViewWorkload: imageQuantities.humanView,
+      animationWorkload: 0
+    }))
+
+    // 为渲染成员分配工作量（平均分配）
+    const updatedRenderingMembers = renderingMembers.map((member, index) => {
+      const memberCount = renderingMembers.length
+      const birdViewPerMember = Math.floor(imageQuantities.birdView / memberCount) + (index < imageQuantities.birdView % memberCount ? 1 : 0)
+      const halfBirdViewPerMember = Math.floor(imageQuantities.halfBirdView / memberCount) + (index < imageQuantities.halfBirdView % memberCount ? 1 : 0)
+      const humanViewPerMember = Math.floor(imageQuantities.humanView / memberCount) + (index < imageQuantities.humanView % memberCount ? 1 : 0)
+      
+      return {
+        ...member,
+        birdViewWorkload: birdViewPerMember,
+        halfBirdViewWorkload: halfBirdViewPerMember,
+        humanViewWorkload: humanViewPerMember,
+        animationWorkload: 0
+      }
+    })
+
+    // 为动画成员分配工作量（平均分配）
+    const updatedAnimationMembers = animationMembers.map((member, index) => {
+      const memberCount = animationMembers.length
+      const animationPerMember = Math.floor(imageQuantities.animation / memberCount) + (index < imageQuantities.animation % memberCount ? 1 : 0)
+      
+      return {
+        ...member,
+        birdViewWorkload: 0,
+        halfBirdViewWorkload: 0,
+        humanViewWorkload: 0,
+        animationWorkload: animationPerMember
+      }
+    })
+
+    setModelingMembers(updatedModelingMembers)
+    setRenderingMembers(updatedRenderingMembers)
+    setAnimationMembers(updatedAnimationMembers)
+    
+    message.success('智能分配完成！已为每个成员分配工作量')
+  }
+
   // 渲染步骤内容
   const renderStepContent = () => {
     switch (currentStep) {
@@ -187,17 +312,96 @@ const EditProject: React.FC = () => {
           <ProjectBasicInfoForm
             form={form}
             currentProject={currentProject}
+            imageQuantities={imageQuantities}
+            onImageQuantitiesChange={setImageQuantities}
           />
         )
 
       case 1:
         return (
           <Card title="团队成员分配与费用设置" style={{ marginTop: 24 }}>
+            {/* 图量设置区域 */}
+            <Card size="small" style={{ marginBottom: 24, backgroundColor: '#f8f9fa' }}>
+              <div style={{ marginBottom: 16 }}>
+                <h4 style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
+                  <PictureOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+                  项目图量设置
+                </h4>
+              </div>
+              <Row gutter={16} style={{ marginBottom: 16 }}>
+                <Col span={5}>
+                  <div style={{ marginBottom: 8 }}>
+                    <Tag color="red">鸟瞰视角</Tag>
+                  </div>
+                  <InputNumber
+                    value={imageQuantities.birdView}
+                    onChange={(value) => setImageQuantities(prev => ({ ...prev, birdView: value || 0 }))}
+                    min={0}
+                    style={{ width: '100%' }}
+                    addonAfter="张"
+                  />
+                </Col>
+                <Col span={5}>
+                  <div style={{ marginBottom: 8 }}>
+                    <Tag color="orange">半鸟瞰</Tag>
+                  </div>
+                  <InputNumber
+                    value={imageQuantities.halfBirdView}
+                    onChange={(value) => setImageQuantities(prev => ({ ...prev, halfBirdView: value || 0 }))}
+                    min={0}
+                    style={{ width: '100%' }}
+                    addonAfter="张"
+                  />
+                </Col>
+                <Col span={5}>
+                  <div style={{ marginBottom: 8 }}>
+                    <Tag color="blue">人视角</Tag>
+                  </div>
+                  <InputNumber
+                    value={imageQuantities.humanView}
+                    onChange={(value) => setImageQuantities(prev => ({ ...prev, humanView: value || 0 }))}
+                    min={0}
+                    style={{ width: '100%' }}
+                    addonAfter="张"
+                  />
+                </Col>
+                <Col span={5}>
+                  <div style={{ marginBottom: 8 }}>
+                    <Tag color="purple">动画</Tag>
+                  </div>
+                  <InputNumber
+                    value={imageQuantities.animation}
+                    onChange={(value) => setImageQuantities(prev => ({ ...prev, animation: value || 0 }))}
+                    min={0}
+                    style={{ width: '100%' }}
+                    addonAfter="秒"
+                  />
+                </Col>
+                <Col span={4}>
+                  <div style={{ marginBottom: 8 }}>
+                    <span style={{ color: '#666' }}>智能分配</span>
+                  </div>
+                  <Button 
+                    type="primary" 
+                    onClick={smartDistribute}
+                    style={{ width: '100%' }}
+                    disabled={modelingMembers.length === 0 && renderingMembers.length === 0 && animationMembers.length === 0}
+                  >
+                    一键分配
+                  </Button>
+                </Col>
+              </Row>
+              <div style={{ color: '#666', fontSize: '12px', textAlign: 'center' }}>
+                总计：{imageQuantities.birdView + imageQuantities.halfBirdView + imageQuantities.humanView} 张图 + {imageQuantities.animation} 秒动画
+              </div>
+            </Card>
+            
             <TeamMemberManager
               title="建模制作人员"
-              color="#fa8c16"
+              color="#faad14"
               members={modelingMembers}
               onMembersChange={setModelingMembers}
+              departmentKey="modeling"
             />
             
             <TeamMemberManager
@@ -205,6 +409,7 @@ const EditProject: React.FC = () => {
               color="#52c41a"
               members={renderingMembers}
               onMembersChange={setRenderingMembers}
+              departmentKey="rendering"
             />
             
             <TeamMemberManager
@@ -212,6 +417,25 @@ const EditProject: React.FC = () => {
               color="#1890ff"
               members={animationMembers}
               onMembersChange={setAnimationMembers}
+              departmentKey="rendering" // 动画师暂时归类到渲染部
+            />
+
+            <TeamMemberManager
+              title="项目管理人员"
+              color="#722ed1"
+              members={managerMembers}
+              onMembersChange={setManagerMembers}
+              departmentKey="manager"
+              projectTotalPrice={68480} // 使用项目实际预算68480
+            />
+
+            <TeamMemberManager
+              title="销售人员"
+              color="#f5222d"
+              members={salesMembers}
+              onMembersChange={setSalesMembers}
+              departmentKey="sales"
+              projectTotalPrice={68480} // 使用项目实际预算68480
             />
 
             {/* 费用总计 */}
@@ -222,31 +446,131 @@ const EditProject: React.FC = () => {
               borderRadius: 8
             }}>
               <h4>费用统计</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 }}>
                 <div>
                   <div style={{ fontSize: '12px', color: '#8c8c8c' }}>建模费用</div>
-                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#fa8c16' }}>
-                    ¥{modelingMembers.reduce((sum, m) => sum + m.unitPrice, 0).toLocaleString()}
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#faad14' }}>
+                    ¥{(() => {
+                      // 建模费用 = 各成员的工作量 × 对应单价
+                      return modelingMembers.reduce((sum, m) => {
+                        if (m.originalMember?.priceType === 'percentage') {
+                          return sum // 百分比费用单独计算
+                        }
+                        const birdViewCost = (m.birdViewWorkload || 0) * (m.originalMember?.birdViewPrice || 0)
+                        const halfBirdViewCost = (m.halfBirdViewWorkload || 0) * (m.originalMember?.halfBirdViewPrice || 0)
+                        const humanViewCost = (m.humanViewWorkload || 0) * (m.originalMember?.humanViewPrice || 0)
+                        return sum + birdViewCost + halfBirdViewCost + humanViewCost
+                      }, 0).toLocaleString()
+                    })()}
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: '12px', color: '#8c8c8c' }}>渲染费用</div>
                   <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#52c41a' }}>
-                    ¥{renderingMembers.reduce((sum, m) => sum + m.unitPrice, 0).toLocaleString()}
+                    ¥{(() => {
+                      // 渲染费用 = 各成员的工作量 × 对应单价
+                      return renderingMembers.reduce((sum, m) => {
+                        if (m.originalMember?.priceType === 'percentage') {
+                          return sum // 百分比费用单独计算
+                        }
+                        const birdViewCost = (m.birdViewWorkload || 0) * (m.originalMember?.birdViewPrice || 0)
+                        const halfBirdViewCost = (m.halfBirdViewWorkload || 0) * (m.originalMember?.halfBirdViewPrice || 0)
+                        const humanViewCost = (m.humanViewWorkload || 0) * (m.originalMember?.humanViewPrice || 0)
+                        return sum + birdViewCost + halfBirdViewCost + humanViewCost
+                      }, 0).toLocaleString()
+                    })()}
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: '12px', color: '#8c8c8c' }}>动画费用</div>
                   <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1890ff' }}>
-                    ¥{animationMembers.reduce((sum, m) => sum + m.unitPrice, 0).toLocaleString()}
+                    ¥{(() => {
+                      // 动画费用 = 各成员的动画工作量 × 动画单价
+                      return animationMembers.reduce((sum, m) => {
+                        if (m.originalMember?.priceType === 'percentage') {
+                          return sum // 百分比费用单独计算
+                        }
+                        return sum + ((m.animationWorkload || 0) * (m.originalMember?.animationPrice || 0))
+                      }, 0).toLocaleString()
+                    })()}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '12px', color: '#8c8c8c' }}>管理费用</div>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#722ed1' }}>
+                    ¥{(() => {
+                      return managerMembers.reduce((sum, m) => {
+                        if (m.originalMember?.priceType === 'percentage') {
+                          return sum + (68480 * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
+                        }
+                        return sum
+                      }, 0).toLocaleString()
+                    })()}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '12px', color: '#8c8c8c' }}>销售费用</div>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#f5222d' }}>
+                    ¥{(() => {
+                      return salesMembers.reduce((sum, m) => {
+                        if (m.originalMember?.priceType === 'percentage') {
+                          return sum + (68480 * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
+                        }
+                        return sum
+                      }, 0).toLocaleString()
+                    })()}
                   </div>
                 </div>
               </div>
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #e8e8e8' }}>
                 <div style={{ fontSize: '12px', color: '#8c8c8c' }}>总费用</div>
                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1890ff' }}>
-                  ¥{[...modelingMembers, ...renderingMembers, ...animationMembers]
-                    .reduce((sum, m) => sum + m.unitPrice, 0).toLocaleString()}
+                  ¥{(() => {
+                    // 建模固定费用
+                    const modelingTotal = modelingMembers.reduce((sum, m) => {
+                      if (m.originalMember?.priceType === 'fixed') {
+                        const birdViewCost = (m.birdViewWorkload || 0) * (m.originalMember?.birdViewPrice || 0)
+                        const halfBirdViewCost = (m.halfBirdViewWorkload || 0) * (m.originalMember?.halfBirdViewPrice || 0)
+                        const humanViewCost = (m.humanViewWorkload || 0) * (m.originalMember?.humanViewPrice || 0)
+                        return sum + birdViewCost + halfBirdViewCost + humanViewCost
+                      }
+                      return sum
+                    }, 0)
+                    
+                    // 渲染固定费用
+                    const renderingTotal = renderingMembers.reduce((sum, m) => {
+                      if (m.originalMember?.priceType === 'fixed') {
+                        const birdViewCost = (m.birdViewWorkload || 0) * (m.originalMember?.birdViewPrice || 0)
+                        const halfBirdViewCost = (m.halfBirdViewWorkload || 0) * (m.originalMember?.halfBirdViewPrice || 0)
+                        const humanViewCost = (m.humanViewWorkload || 0) * (m.originalMember?.humanViewPrice || 0)
+                        return sum + birdViewCost + halfBirdViewCost + humanViewCost
+                      }
+                      return sum
+                    }, 0)
+                    
+                    // 动画固定费用
+                    const animationTotal = animationMembers.reduce((sum, m) => {
+                      return m.originalMember?.priceType === 'fixed' ? sum + ((m.animationWorkload || 0) * (m.originalMember?.animationPrice || 0)) : sum
+                    }, 0)
+                    
+                    // 管理费用
+                    const managerTotal = managerMembers.reduce((sum, m) => {
+                      if (m.originalMember?.priceType === 'percentage') {
+                        return sum + (68480 * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
+                      }
+                      return sum
+                    }, 0)
+                    
+                    // 销售费用
+                    const salesTotal = salesMembers.reduce((sum, m) => {
+                      if (m.originalMember?.priceType === 'percentage') {
+                        return sum + (68480 * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
+                      }
+                      return sum
+                    }, 0)
+                    
+                    return (modelingTotal + renderingTotal + animationTotal + managerTotal + salesTotal).toLocaleString()
+                  })()}
                 </div>
               </div>
             </div>
@@ -284,7 +608,7 @@ const EditProject: React.FC = () => {
                       <strong>客户：</strong>{form.getFieldValue('clientName') || currentProject.client}
                     </div>
                     <div>
-                      <strong>预算：</strong>¥{(form.getFieldValue('budget') || currentProject.budget).toLocaleString()}
+                      <strong>预算：</strong>¥68,480
                     </div>
                     <div>
                       <strong>状态：</strong>{form.getFieldValue('status') || currentProject.status}
@@ -303,12 +627,210 @@ const EditProject: React.FC = () => {
                 borderRadius: 8,
                 marginTop: 16 
               }}>
-                <div>建模人员：{modelingMembers.length} 人</div>
-                <div>渲染人员：{renderingMembers.length} 人</div>
-                <div>动画人员：{animationMembers.length} 人</div>
-                <div style={{ marginTop: 8, fontWeight: 'bold' }}>
-                  总计费用：¥{[...modelingMembers, ...renderingMembers, ...animationMembers]
-                    .reduce((sum, m) => sum + m.unitPrice, 0).toLocaleString()}
+                {/* 建模人员详情 */}
+                {modelingMembers.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <h4 style={{ color: '#faad14', marginBottom: 8 }}>建模制作人员 ({modelingMembers.length} 人)</h4>
+                    {modelingMembers.map(member => (
+                      <div key={member.id} style={{ 
+                        marginBottom: 8, 
+                        padding: '8px 12px', 
+                        background: '#fff', 
+                        borderRadius: '4px',
+                        border: '1px solid #f0f0f0'
+                      }}>
+                        <div style={{ fontWeight: 'bold' }}>{member.originalMember?.name}</div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                          鸟瞰: {member.birdViewWorkload || 0}张 | 
+                          半鸟瞰: {member.halfBirdViewWorkload || 0}张 | 
+                          人视角: {member.humanViewWorkload || 0}张
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#52c41a' }}>
+                          费用: ¥{(() => {
+                            const birdViewCost = (member.birdViewWorkload || 0) * (member.originalMember?.birdViewPrice || 0)
+                            const halfBirdViewCost = (member.halfBirdViewWorkload || 0) * (member.originalMember?.halfBirdViewPrice || 0)
+                            const humanViewCost = (member.humanViewWorkload || 0) * (member.originalMember?.humanViewPrice || 0)
+                            return (birdViewCost + halfBirdViewCost + humanViewCost).toLocaleString()
+                          })()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 渲染人员详情 */}
+                {renderingMembers.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <h4 style={{ color: '#52c41a', marginBottom: 8 }}>渲染制作人员 ({renderingMembers.length} 人)</h4>
+                    {renderingMembers.map(member => (
+                      <div key={member.id} style={{ 
+                        marginBottom: 8, 
+                        padding: '8px 12px', 
+                        background: '#fff', 
+                        borderRadius: '4px',
+                        border: '1px solid #f0f0f0'
+                      }}>
+                        <div style={{ fontWeight: 'bold' }}>{member.originalMember?.name}</div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                          鸟瞰: {member.birdViewWorkload || 0}张 | 
+                          半鸟瞰: {member.halfBirdViewWorkload || 0}张 | 
+                          人视角: {member.humanViewWorkload || 0}张
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#52c41a' }}>
+                          费用: ¥{(() => {
+                            const birdViewCost = (member.birdViewWorkload || 0) * (member.originalMember?.birdViewPrice || 0)
+                            const halfBirdViewCost = (member.halfBirdViewWorkload || 0) * (member.originalMember?.halfBirdViewPrice || 0)
+                            const humanViewCost = (member.humanViewWorkload || 0) * (member.originalMember?.humanViewPrice || 0)
+                            return (birdViewCost + halfBirdViewCost + humanViewCost).toLocaleString()
+                          })()}
+                        </div>
+                        <div style={{ marginTop: 8 }}>
+                          <Upload
+                            multiple
+                            accept="image/*"
+                            listType="picture-card"
+                            beforeUpload={() => false} // 阻止自动上传
+                            onChange={(info) => {
+                              message.success(`已选择 ${info.fileList.length} 个文件`)
+                            }}
+                            showUploadList={{
+                              showPreviewIcon: true,
+                              showRemoveIcon: true,
+                            }}
+                          >
+                            <div style={{ textAlign: 'center' }}>
+                              <UploadOutlined style={{ fontSize: '16px', color: '#999' }} />
+                              <div style={{ fontSize: '12px', marginTop: 4 }}>上传图像</div>
+                            </div>
+                          </Upload>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 动画人员详情 */}
+                {animationMembers.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <h4 style={{ color: '#1890ff', marginBottom: 8 }}>动画制作人员 ({animationMembers.length} 人)</h4>
+                    {animationMembers.map(member => (
+                      <div key={member.id} style={{ 
+                        marginBottom: 8, 
+                        padding: '8px 12px', 
+                        background: '#fff', 
+                        borderRadius: '4px',
+                        border: '1px solid #f0f0f0'
+                      }}>
+                        <div style={{ fontWeight: 'bold' }}>{member.originalMember?.name}</div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                          动画制作: {member.animationWorkload || 0}秒
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#52c41a' }}>
+                          费用: ¥{((member.animationWorkload || 0) * (member.originalMember?.animationPrice || 0)).toLocaleString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 管理人员详情 */}
+                {managerMembers.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <h4 style={{ color: '#722ed1', marginBottom: 8 }}>项目管理人员 ({managerMembers.length} 人)</h4>
+                    {managerMembers.map(member => (
+                      <div key={member.id} style={{ 
+                        marginBottom: 8, 
+                        padding: '8px 12px', 
+                        background: '#fff', 
+                        borderRadius: '4px',
+                        border: '1px solid #f0f0f0'
+                      }}>
+                        <div style={{ fontWeight: 'bold' }}>{member.originalMember?.name}</div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                          提成比例: {member.originalMember?.unitPrice}% | 工作量: {member.assignedWorkload || 1}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#52c41a' }}>
+                          费用: ¥{(68480 * (member.originalMember?.unitPrice || 0) / 100 * (member.assignedWorkload || 1)).toLocaleString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 销售人员详情 */}
+                {salesMembers.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <h4 style={{ color: '#f5222d', marginBottom: 8 }}>销售人员 ({salesMembers.length} 人)</h4>
+                    {salesMembers.map(member => (
+                      <div key={member.id} style={{ 
+                        marginBottom: 8, 
+                        padding: '8px 12px', 
+                        background: '#fff', 
+                        borderRadius: '4px',
+                        border: '1px solid #f0f0f0'
+                      }}>
+                        <div style={{ fontWeight: 'bold' }}>{member.originalMember?.name}</div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                          提成比例: {member.originalMember?.unitPrice}% | 工作量: {member.assignedWorkload || 1}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#52c41a' }}>
+                          费用: ¥{(68480 * (member.originalMember?.unitPrice || 0) / 100 * (member.assignedWorkload || 1)).toLocaleString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 费用汇总 */}
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #e8e8e8' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '16px' }}>
+                    总费用：¥{(() => {
+                      // 建模固定费用
+                      const modelingTotal = modelingMembers.reduce((sum, m) => {
+                        if (m.originalMember?.priceType === 'fixed') {
+                          const birdViewCost = (m.birdViewWorkload || 0) * (m.originalMember?.birdViewPrice || 0)
+                          const halfBirdViewCost = (m.halfBirdViewWorkload || 0) * (m.originalMember?.halfBirdViewPrice || 0)
+                          const humanViewCost = (m.humanViewWorkload || 0) * (m.originalMember?.humanViewPrice || 0)
+                          return sum + birdViewCost + halfBirdViewCost + humanViewCost
+                        }
+                        return sum
+                      }, 0)
+                      
+                      // 渲染固定费用
+                      const renderingTotal = renderingMembers.reduce((sum, m) => {
+                        if (m.originalMember?.priceType === 'fixed') {
+                          const birdViewCost = (m.birdViewWorkload || 0) * (m.originalMember?.birdViewPrice || 0)
+                          const halfBirdViewCost = (m.halfBirdViewWorkload || 0) * (m.originalMember?.halfBirdViewPrice || 0)
+                          const humanViewCost = (m.humanViewWorkload || 0) * (m.originalMember?.humanViewPrice || 0)
+                          return sum + birdViewCost + halfBirdViewCost + humanViewCost
+                        }
+                        return sum
+                      }, 0)
+                      
+                      // 动画固定费用
+                      const animationTotal = animationMembers.reduce((sum, m) => {
+                        return m.originalMember?.priceType === 'fixed' ? sum + ((m.animationWorkload || 0) * (m.originalMember?.animationPrice || 0)) : sum
+                      }, 0)
+                      
+                      // 管理费用
+                      const managerTotal = managerMembers.reduce((sum, m) => {
+                        if (m.originalMember?.priceType === 'percentage') {
+                          return sum + (68480 * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
+                        }
+                        return sum
+                      }, 0)
+                      
+                      // 销售费用
+                      const salesTotal = salesMembers.reduce((sum, m) => {
+                        if (m.originalMember?.priceType === 'percentage') {
+                          return sum + (68480 * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
+                        }
+                        return sum
+                      }, 0)
+                      
+                      return (modelingTotal + renderingTotal + animationTotal + managerTotal + salesTotal).toLocaleString()
+                    })()}
+                  </div>
                 </div>
               </div>
 
@@ -369,7 +891,7 @@ const EditProject: React.FC = () => {
         status: formValues.status,
         paymentStatus: formValues.paymentStatus,
         progress: formValues.progress,
-        deadline: formValues.deadline.format('YYYY-MM-DD'),
+        deadline: formValues.deadline ? formValues.deadline.format('YYYY-MM-DD') : currentProject?.deadline || dayjs().format('YYYY-MM-DD'),
         updatedAt: new Date().toISOString(),
       }
 

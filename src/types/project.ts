@@ -11,6 +11,17 @@ import { Client } from './client'
 // 重新导出以保持向后兼容性
 export type { TeamMember, Client }
 
+// 项目团队成员接口（扩展TeamMember）
+export interface ProjectTeamMember extends TeamMember {
+  assignedWorkload?: number // 分配的工作量
+  originalMember?: TeamMember // 原始团队成员信息
+  imageDistribution?: {
+    birdView: number
+    halfBirdView: number
+    humanView: number
+  } // 图量分配详情（仅渲染人员使用）
+}
+
 // 项目基础接口
 export interface Project {
   id: string

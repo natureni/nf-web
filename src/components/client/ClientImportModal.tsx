@@ -18,42 +18,73 @@ const ClientImportModal: React.FC<ClientImportModalProps> = ({
   const downloadTemplate = () => {
     const templateData = [
       {
-        '公司名称(英文)*': 'Company Name Ltd',
-        '公司名称(中文)': '公司中文名',
-        '联系人(英文)*': 'Contact Person',
-        '联系人(中文)': '联系人中文名',
-        '职位(英文)': 'Job Title',
-        '职位(中文)': '职位中文',
-        '邮箱*': 'email@company.com',
-        '电话': '+61 7 3007 3800',
-        '传真': '+61 7 3007 3801',
-        '网站': 'https://company.com',
-        '企业注册地址-街道*': 'Level 15, 500 Queen Street',
-        '企业注册地址-城市*': 'Brisbane',
-        '企业注册地址-州/省': 'QLD',
-        '企业注册地址-邮编': '4000',
-        '企业注册地址-国家*': 'Australia',
-        '地区': 'Asia-Pacific',
+        '公司名称*': 'URBIS 澳洲城市规划设计公司',
+        '联系人*': 'David Johnson 大卫·约翰逊',
+        '职位*': 'Senior Partner 高级合伙人',
+        '邮箱*': 'david.johnson@urbis.com.au',
+        '电话*': '+61 7 3007 3800',
+        '地区*': 'Asia-Pacific',
+        '网站': 'https://urbis.com.au',
         '时区': 'AEST (UTC+10)',
         '语言': 'English,Mandarin',
-        '业务类型': 'Real Estate,Commercial Development',
-        '风格偏好': 'Modern,Commercial,Residential High-rise',
+        '业务类型': 'Urban Planning,Property Development,Architecture',
+        '偏好风格': 'Modern,Commercial,Residential High-rise',
         '预算范围': '$200,000 - $500,000',
         '时间周期': '3-6 months',
         '沟通方式': 'Email + Video Call',
         '付款条款': 'Net 30',
         '付款方式': 'Wire Transfer',
-        '币种': 'AUD',
+        '货币': 'AUD',
         '信用评级': 'A',
-        '受益人银行名称*': 'Commonwealth Bank of Australia',
-        '受益人银行地址*': '240 Queen Street, Brisbane QLD 4000',
-        '受益人银行代码*': '062',
-        'SWIFT代码*': 'CTBAAU2S',
-        '受益人账户名称*': 'Company Name Pty Ltd',
-        '受益人账户号码*': '062-001-12345678',
-        '客户标签': 'VIP客户,长期合作',
-        '客户状态': 'active',
-        '备注': '重要客户，需要优先处理'
+        '客户标签': 'VIP客户,长期合作,大型项目',
+        '状态': 'active',
+        '备注': '重要客户，澳洲知名城市规划设计公司，项目质量要求高，付款及时。'
+      },
+      {
+        '公司名称*': 'Bathurst Development Corp 巴瑟斯特开发公司',
+        '联系人*': 'Sarah Mitchell 萨拉·米切尔',
+        '职位*': 'Development Manager 开发经理',
+        '邮箱*': 'sarah.mitchell@bathurst.com',
+        '电话*': '+61 2 6331 8900',
+        '地区*': 'Asia-Pacific',
+        '网站': 'https://bathurst-development.com',
+        '时区': 'AEST (UTC+10)',
+        '语言': 'English',
+        '业务类型': 'Real Estate,Commercial Development',
+        '偏好风格': 'Contemporary,Mixed-use',
+        '预算范围': '$150,000 - $300,000',
+        '时间周期': '2-4 months',
+        '沟通方式': 'Email + Phone',
+        '付款条款': 'Net 45',
+        '付款方式': 'Bank Transfer',
+        '货币': 'AUD',
+        '信用评级': 'B',
+        '客户标签': '中型项目,稳定客户',
+        '状态': 'active',
+        '备注': '地区性开发商，项目规模适中，合作关系良好。'
+      },
+      {
+        '公司名称*': 'NCCEC Group 中国建筑工程集团',
+        '联系人*': 'Wang Lei 王磊',
+        '职位*': 'Project Director 项目总监',
+        '邮箱*': 'wang.lei@nccec.com.cn',
+        '电话*': '+86 10 8888 9999',
+        '地区*': 'Asia-Pacific',
+        '网站': 'https://nccec.com.cn',
+        '时区': 'CST (UTC+8)',
+        '语言': 'Mandarin,English',
+        '业务类型': 'Architecture,Public Architecture,Cultural Buildings',
+        '偏好风格': 'Grand,Cultural,Exhibition',
+        '预算范围': '$500,000+',
+        '时间周期': '6-12 months',
+        '沟通方式': 'WeChat + Email',
+        '付款条款': 'Net 60',
+        '付款方式': 'Wire Transfer',
+        '货币': 'CNY',
+        '信用评级': 'A',
+        '客户标签': '国际客户,大型项目,文化建筑',
+        '状态': 'active',
+        '备注': '中国大型建筑集团，主要承接文化建筑和公共建筑项目。'
       }
     ]
 
@@ -63,12 +94,27 @@ const ClientImportModal: React.FC<ClientImportModalProps> = ({
     
     // 设置列宽
     const colWidths = [
-      { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
-      { wch: 25 }, { wch: 18 }, { wch: 18 }, { wch: 25 }, { wch: 30 }, { wch: 15 },
-      { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 20 },
-      { wch: 30 }, { wch: 30 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 },
-      { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 30 }, { wch: 35 }, { wch: 15 },
-      { wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 30 }
+      { wch: 35 }, // 公司名称
+      { wch: 25 }, // 联系人
+      { wch: 25 }, // 职位
+      { wch: 30 }, // 邮箱
+      { wch: 18 }, // 电话
+      { wch: 15 }, // 地区
+      { wch: 30 }, // 网站
+      { wch: 18 }, // 时区
+      { wch: 20 }, // 语言
+      { wch: 40 }, // 业务类型
+      { wch: 40 }, // 偏好风格
+      { wch: 25 }, // 预算范围
+      { wch: 15 }, // 时间周期
+      { wch: 20 }, // 沟通方式
+      { wch: 12 }, // 付款条款
+      { wch: 15 }, // 付款方式
+      { wch: 10 }, // 货币
+      { wch: 12 }, // 信用评级
+      { wch: 30 }, // 客户标签
+      { wch: 12 }, // 状态
+      { wch: 50 }  // 备注
     ]
     ws['!cols'] = colWidths
 

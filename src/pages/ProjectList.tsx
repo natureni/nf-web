@@ -1,17 +1,20 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Modal, message } from 'antd'
-import { PlusOutlined } from '@ant-design/icons'
+import { PlusOutlined, ImportOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import jsPDF from 'jspdf'
+import * as XLSX from 'xlsx'
 
 // 导入类型定义
-import { Project, ContractService, ContractInfo, ProjectFilters } from '../types/project'
+import { Project, ContractService, ContractInfo, ProjectFilters, ProjectStatus, PaymentStatus } from '../types/project'
+import { getExchangeRate } from '../utils/exchangeRates'
 
 // 导入组件
 import ProjectStats from '../components/project/ProjectStats'
 import ProjectSearchFilters from '../components/project/ProjectSearchFilters'
 import ProjectTable from '../components/project/ProjectTable'
+import ProjectImportModal from '../components/project/ProjectImportModal'
 
 const ProjectList: React.FC = () => {
   const navigate = useNavigate()
@@ -21,6 +24,7 @@ const ProjectList: React.FC = () => {
     clientFilter: ''
   })
   const [contractModalVisible, setContractModalVisible] = useState(false)
+  const [importModalVisible, setImportModalVisible] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
 
@@ -49,10 +53,10 @@ const ProjectList: React.FC = () => {
         client: 'NCCEC集团',
         status: 'modeling',
         deadline: '2025-04-20',
-        budget: 68000,
+        budget: 68400,
         currency: 'USD',
         exchangeRate: 7.24,
-        budgetCNY: 492320,
+        budgetCNY: 495216,
         paymentStatus: 'partial',
         progress: 35,
         type: '办公建筑',
@@ -221,16 +225,39 @@ const ProjectList: React.FC = () => {
     setContractModalVisible(true)
   }
 
+  // 导入项目
+  const handleImportProjects = (importedProjects: Project[]) => {
+    setProjects(importedProjects)
+    localStorage.setItem('nflab_projects', JSON.stringify(importedProjects))
+    message.success('项目导入成功！')
+    setImportModalVisible(false)
+  }
+
   // 获取唯一客户列表
-  const uniqueClients = Array.from(new Set(projects.map(p => p.client))).sort()
+  const uniqueClients = Array.from(new Set(
+    projects
+      .filter(p => p && p.client) // 过滤掉空项目和没有客户的项目
+      .map(p => p.client)
+  )).sort()
 
   // 过滤数据
   const filteredProjects = projects.filter(project => {
-    const matchesSearch = project.name.toLowerCase().includes(filters.searchText.toLowerCase()) ||
-                         project.client.toLowerCase().includes(filters.searchText.toLowerCase()) ||
-                         project.protocolNumber.toLowerCase().includes(filters.searchText.toLowerCase())
+    // 确保project对象存在
+    if (!project) return false
+    
+    const searchText = (filters.searchText || '').toLowerCase()
+    const projectName = (project.name || '').toLowerCase()
+    const projectClient = (project.client || '').toLowerCase()
+    const projectProtocol = (project.protocolNumber || '').toLowerCase()
+    
+    const matchesSearch = searchText === '' || 
+                         projectName.includes(searchText) ||
+                         projectClient.includes(searchText) ||
+                         projectProtocol.includes(searchText)
+                         
     const matchesStatus = !filters.statusFilter || project.status === filters.statusFilter
     const matchesClient = !filters.clientFilter || project.client === filters.clientFilter
+    
     return matchesSearch && matchesStatus && matchesClient
   })
 
@@ -409,14 +436,24 @@ const ProjectList: React.FC = () => {
               管理和跟踪所有项目的状态和进度
             </p>
           </div>
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />} 
-            size="large"
-            onClick={() => navigate('/projects/create')}
-          >
-            新建项目
-          </Button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />} 
+              size="large"
+              onClick={() => navigate('/projects/create')}
+            >
+              新建项目
+            </Button>
+            <Button 
+              type="default" 
+              icon={<ImportOutlined />} 
+              size="large"
+              onClick={() => setImportModalVisible(true)}
+            >
+              导入项目
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -461,6 +498,13 @@ const ProjectList: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* 导入项目模态框 */}
+      <ProjectImportModal
+        open={importModalVisible}
+        onClose={() => setImportModalVisible(false)}
+        onImportSuccess={handleImportProjects}
+      />
     </div>
   )
 }

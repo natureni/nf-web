@@ -112,14 +112,25 @@ const ProjectSchedule: React.FC<ProjectScheduleProps> = ({
       key: 'color',
       width: 100,
       render: (color: string, record: ScheduleItem) => (
-        <div style={{
-          width: 30,
-          height: 20,
-          backgroundColor: color,
-          borderRadius: 4,
-          border: '1px solid #d9d9d9',
-          cursor: 'pointer'
-        }} />
+        <ColorPicker
+          value={color}
+          onChange={(value) => updateScheduleItem(record.id, 'color', value.toHexString())}
+          size="small"
+          presets={[
+            {
+              label: '推荐颜色',
+              colors: [
+                '#d9d9d9', // 灰色 - 项目报备
+                '#fa8c16', // 橙色 - 项目建模
+                '#52c41a', // 绿色 - 项目渲染/动画
+                '#ff4d4f', // 红色 - 项目出图
+                '#8c8c8c', // 浅灰色 - 项目暂停
+                '#1890ff', // 蓝色
+                '#722ed1', // 紫色
+              ],
+            },
+          ]}
+        />
       ),
     },
     {

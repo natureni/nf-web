@@ -4,17 +4,11 @@ import {
   Row,
   Col,
   Form,
-  InputNumber,
   Button,
   message,
   Tabs,
-  Divider,
   Space,
   Typography,
-  Alert,
-  Table,
-  Tag,
-  Tooltip,
   Switch,
 } from 'antd'
 import {
@@ -24,29 +18,17 @@ import {
   GlobalOutlined,
   SaveOutlined,
   ReloadOutlined,
-  InfoCircleOutlined,
 } from '@ant-design/icons'
 
+// 导入类型定义
+import { ExchangeRate, SystemSettings as SystemSettingsType } from '../types/project'
+
+// 导入组件
+import ExchangeRateForm from '../components/settings/ExchangeRateForm'
+import ExchangeRateTable from '../components/settings/ExchangeRateTable'
+import SystemConfigPanel from '../components/settings/SystemConfigPanel'
+
 const { Title, Text } = Typography
-
-// 汇率数据接口
-interface ExchangeRate {
-  currency: string
-  currencyCode: string
-  currencySymbol: string
-  rate: number
-  lastUpdated?: string
-  region?: string
-  flag?: string
-}
-
-// 系统设置接口
-interface SystemSettings {
-  exchangeRates: ExchangeRate[]
-  autoUpdate: boolean
-  baseCurrency: string
-  lastSyncTime?: string
-}
 
 const SystemSettings: React.FC = () => {
   const [form] = Form.useForm()
@@ -97,8 +79,8 @@ const SystemSettings: React.FC = () => {
       
       setExchangeRates(updatedRates)
       
-      // 保存到本地存储（实际项目中应该保存到后端）
-      const settings: SystemSettings = {
+      // 保存到本地存储
+      const settings: SystemSettingsType = {
         exchangeRates: updatedRates,
         autoUpdate: autoUpdateEnabled,
         baseCurrency: 'CNY',
@@ -159,7 +141,7 @@ const SystemSettings: React.FC = () => {
     const savedSettings = localStorage.getItem('systemSettings')
     if (savedSettings) {
       try {
-        const settings: SystemSettings = JSON.parse(savedSettings)
+        const settings: SystemSettingsType = JSON.parse(savedSettings)
         setExchangeRates(settings.exchangeRates)
         setAutoUpdateEnabled(settings.autoUpdate)
       } catch (error) {
@@ -175,50 +157,89 @@ const SystemSettings: React.FC = () => {
     form.setFieldsValue(initialValues)
   }, [])
 
-  // 汇率表格列定义
-  const rateColumns = [
+  const tabItems = [
     {
-      title: '货币',
-      dataIndex: 'currency',
-      key: 'currency',
-      render: (text: string, record: ExchangeRate) => (
-        <Space>
-          <span style={{ fontSize: '18px' }}>{record.flag}</span>
-          <div>
-            <div style={{ fontWeight: 500 }}>{text}</div>
-            <Text type="secondary" style={{ fontSize: '12px' }}>
-              {record.currencyCode} · {record.region}
-            </Text>
-          </div>
-        </Space>
+      key: 'exchange',
+      label: (
+        <span>
+          <DollarOutlined />
+          汇率管理
+        </span>
       ),
+      children: (
+        <Row gutter={24}>
+          {/* 汇率设置表单 */}
+          <Col span={14}>
+            <Card 
+              title={
+                <Space>
+                  <BankOutlined />
+                  汇率设置
+                </Space>
+              }
+              extra={
+                <Space>
+                  <Button 
+                    type="primary" 
+                    ghost 
+                    icon={<ReloadOutlined />}
+                    onClick={handleSyncRates}
+                    loading={loading}
+                  >
+                    同步最新汇率
+                  </Button>
+                  <Button 
+                    icon={<SaveOutlined />}
+                    onClick={handleReset}
+                  >
+                    重置
+                  </Button>
+                  <Button 
+                    type="primary" 
+                    icon={<SaveOutlined />}
+                    onClick={handleSave}
+                    loading={loading}
+                  >
+                    保存设置
+                  </Button>
+                </Space>
+              }
+              style={{ marginBottom: 24 }}
+            >
+              <ExchangeRateForm
+                form={form}
+                exchangeRates={exchangeRates}
+              />
+            </Card>
+          </Col>
+
+          {/* 汇率监控面板 */}
+          <Col span={10}>
+            <Card 
+              title={
+                <Space>
+                  <EuroOutlined />
+                  汇率监控
+                </Space>
+              }
+              style={{ marginBottom: 24 }}
+            >
+              <ExchangeRateTable exchangeRates={exchangeRates} />
+            </Card>
+          </Col>
+        </Row>
+      )
     },
     {
-      title: '汇率（相对人民币）',
-      dataIndex: 'rate',
-      key: 'rate',
-      render: (rate: number, record: ExchangeRate) => (
-        <div>
-          <Text strong style={{ fontSize: '16px', color: '#1890ff' }}>
-            {record.currencySymbol} 1 = ¥ {rate.toFixed(4)}
-          </Text>
-          {record.lastUpdated && (
-            <div style={{ fontSize: '11px', color: '#8c8c8c' }}>
-              更新时间: {new Date(record.lastUpdated).toLocaleString()}
-            </div>
-          )}
-        </div>
+      key: 'system',
+      label: (
+        <span>
+          <GlobalOutlined />
+          系统配置
+        </span>
       ),
-    },
-    {
-      title: '状态',
-      key: 'status',
-      render: () => (
-        <Tag color="green">
-          <InfoCircleOutlined /> 正常
-        </Tag>
-      ),
-    },
+      children: <SystemConfigPanel />
+    }
   ]
 
   return (
@@ -255,221 +276,7 @@ const SystemSettings: React.FC = () => {
       <Tabs 
         defaultActiveKey="exchange" 
         size="large"
-        items={[
-          {
-            key: 'exchange',
-            label: (
-              <span>
-                <DollarOutlined />
-                汇率管理
-              </span>
-            ),
-            children: (
-              <Row gutter={24}>
-                {/* 汇率设置表单 */}
-                <Col span={14}>
-                  <Card 
-                    title={
-                      <Space>
-                        <BankOutlined />
-                        汇率设置
-                      </Space>
-                    }
-                    extra={
-                      <Space>
-                        <Button 
-                          type="primary" 
-                          ghost 
-                          icon={<ReloadOutlined />}
-                          onClick={handleSyncRates}
-                          loading={loading}
-                        >
-                          同步最新汇率
-                        </Button>
-                        <Button 
-                          icon={<SaveOutlined />}
-                          onClick={handleReset}
-                        >
-                          重置
-                        </Button>
-                        <Button 
-                          type="primary" 
-                          icon={<SaveOutlined />}
-                          onClick={handleSave}
-                          loading={loading}
-                        >
-                          保存设置
-                        </Button>
-                      </Space>
-                    }
-                    style={{ marginBottom: 24 }}
-                  >
-                    <Alert
-                      message="汇率说明"
-                      description="当前汇率均相对于人民币(CNY)。修改汇率后请点击保存。系统支持自动同步最新汇率。"
-                      type="info"
-                      showIcon
-                      style={{ marginBottom: 24 }}
-                    />
-
-                    <Form form={form} layout="vertical">
-                      {/* 主要货币 */}
-                      <Divider orientation="left">
-                        <GlobalOutlined /> 主要货币
-                      </Divider>
-                      <Row gutter={16}>
-                        {exchangeRates
-                          .filter(rate => ['USD', 'AUD', 'EUR', 'GBP', 'CAD', 'NZD'].includes(rate.currencyCode))
-                          .map(rate => (
-                            <Col span={8} key={rate.currencyCode}>
-                              <Form.Item
-                                label={
-                                  <Space>
-                                    <span>{rate.flag}</span>
-                                    <span>{rate.currency} ({rate.currencyCode})</span>
-                                  </Space>
-                                }
-                                name={rate.currencyCode}
-                                rules={[
-                                  { required: true, message: '请输入汇率' },
-                                  { type: 'number', min: 0.0001, message: '汇率必须大于0' }
-                                ]}
-                              >
-                                <InputNumber
-                                  style={{ width: '100%' }}
-                                  placeholder={`1 ${rate.currencySymbol} = ? ¥`}
-                                  precision={4}
-                                  min={0.0001}
-                                  max={999}
-                                  step={0.01}
-                                  addonBefore={rate.currencySymbol}
-                                  addonAfter="¥"
-                                />
-                              </Form.Item>
-                            </Col>
-                          ))}
-                      </Row>
-
-                      {/* 中东地区货币 */}
-                      <Divider orientation="left" style={{ marginTop: 32 }}>
-                        🏜️ 中东地区货币
-                      </Divider>
-                      <Row gutter={16}>
-                        {exchangeRates
-                          .filter(rate => ['AED', 'SAR', 'QAR', 'KWD', 'BHD', 'OMR', 'JOD', 'LBP', 'TRY'].includes(rate.currencyCode))
-                          .map(rate => (
-                            <Col span={8} key={rate.currencyCode}>
-                              <Form.Item
-                                label={
-                                  <Space>
-                                    <span>{rate.flag}</span>
-                                    <span>{rate.currency} ({rate.currencyCode})</span>
-                                  </Space>
-                                }
-                                name={rate.currencyCode}
-                                rules={[
-                                  { required: true, message: '请输入汇率' },
-                                  { type: 'number', min: 0.0001, message: '汇率必须大于0' }
-                                ]}
-                              >
-                                <InputNumber
-                                  style={{ width: '100%' }}
-                                  placeholder={`1 ${rate.currencySymbol} = ? ¥`}
-                                  precision={4}
-                                  min={0.0001}
-                                  max={999}
-                                  step={0.01}
-                                  addonBefore={rate.currencySymbol}
-                                  addonAfter="¥"
-                                />
-                              </Form.Item>
-                            </Col>
-                          ))}
-                      </Row>
-
-                      {/* 亚洲货币 */}
-                      <Divider orientation="left" style={{ marginTop: 32 }}>
-                        🌏 亚洲货币
-                      </Divider>
-                      <Row gutter={16}>
-                        {exchangeRates
-                          .filter(rate => ['JPY', 'KRW', 'SGD', 'HKD', 'TWD'].includes(rate.currencyCode))
-                          .map(rate => (
-                            <Col span={8} key={rate.currencyCode}>
-                              <Form.Item
-                                label={
-                                  <Space>
-                                    <span>{rate.flag}</span>
-                                    <span>{rate.currency} ({rate.currencyCode})</span>
-                                  </Space>
-                                }
-                                name={rate.currencyCode}
-                                rules={[
-                                  { required: true, message: '请输入汇率' },
-                                  { type: 'number', min: 0.0001, message: '汇率必须大于0' }
-                                ]}
-                              >
-                                <InputNumber
-                                  style={{ width: '100%' }}
-                                  placeholder={`1 ${rate.currencySymbol} = ? ¥`}
-                                  precision={4}
-                                  min={0.0001}
-                                  max={999}
-                                  step={0.01}
-                                  addonBefore={rate.currencySymbol}
-                                  addonAfter="¥"
-                                />
-                              </Form.Item>
-                            </Col>
-                          ))}
-                      </Row>
-                    </Form>
-                  </Card>
-                </Col>
-
-                {/* 汇率监控面板 */}
-                <Col span={10}>
-                  <Card 
-                    title={
-                      <Space>
-                        <EuroOutlined />
-                        汇率监控
-                      </Space>
-                    }
-                    style={{ marginBottom: 24 }}
-                  >
-                    <Table
-                      columns={rateColumns}
-                      dataSource={exchangeRates}
-                      pagination={{ pageSize: 8 }}
-                      size="small"
-                      rowKey="currencyCode"
-                    />
-                  </Card>
-                </Col>
-              </Row>
-            )
-          },
-          {
-            key: 'system',
-            label: (
-              <span>
-                <GlobalOutlined />
-                系统配置
-              </span>
-            ),
-            children: (
-              <Card title="系统配置" style={{ marginBottom: 24 }}>
-                <Alert
-                  message="功能开发中"
-                  description="更多系统配置功能正在开发中，敬请期待。"
-                  type="info"
-                  showIcon
-                />
-              </Card>
-            )
-          }
-        ]}
+        items={tabItems}
       />
     </div>
   )

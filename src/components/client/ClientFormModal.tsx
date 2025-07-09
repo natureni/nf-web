@@ -103,51 +103,30 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item 
-              label="公司名称 (英文) *" 
+              label="公司名称 *" 
               name="companyName" 
               rules={[{ required: true, message: '请输入公司名称' }]}
             >
-              <Input placeholder="Company Name Ltd" />
+              <Input placeholder="公司名称 / Company Name" />
             </Form.Item>
           </Col>
-          <Col span={12}>
-            <Form.Item label="公司名称 (中文)" name="companyNameCN">
-              <Input placeholder="公司中文名" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
           <Col span={12}>
             <Form.Item 
-              label="联系人 (英文) *" 
+              label="联系人 *" 
               name="contactPerson" 
               rules={[{ required: true, message: '请输入联系人姓名' }]}
             >
-              <Input placeholder="Contact Person" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item label="联系人 (中文)" name="contactPersonCN">
-              <Input placeholder="联系人中文名" />
+              <Input placeholder="联系人姓名 / Contact Person" />
             </Form.Item>
           </Col>
         </Row>
 
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item label="职位 (英文)" name="title">
-              <Input placeholder="Job Title" />
+            <Form.Item label="职位" name="title">
+              <Input placeholder="职位 / Job Title" />
             </Form.Item>
           </Col>
-          <Col span={12}>
-            <Form.Item label="职位 (中文)" name="titleCN">
-              <Input placeholder="职位中文" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
           <Col span={12}>
             <Form.Item 
               label="邮箱 *" 
@@ -160,6 +139,9 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
               <Input placeholder="email@company.com" />
             </Form.Item>
           </Col>
+        </Row>
+
+        <Row gutter={16}>
           <Col span={12}>
             <Form.Item 
               label="电话" 
@@ -169,14 +151,6 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
               <Input placeholder="+61 7 3007 3800" />
             </Form.Item>
           </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item label="传真" name="fax">
-              <Input placeholder="+61 7 3007 3801" />
-            </Form.Item>
-          </Col>
           <Col span={12}>
             <Form.Item label="网站" name="website">
               <Input placeholder="https://company.com" />
@@ -184,45 +158,7 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
           </Col>
         </Row>
 
-        <Divider orientation="left">企业地址 / Business Address</Divider>
-
-        <Form.Item 
-          label="街道地址 *" 
-          name={['businessAddress', 'street']} 
-          rules={[{ required: true, message: '请输入街道地址' }]}
-        >
-          <Input placeholder="Level 15, 500 Queen Street" />
-        </Form.Item>
-
-        <Row gutter={16}>
-          <Col span={8}>
-            <Form.Item 
-              label="城市 *" 
-              name={['businessAddress', 'city']} 
-              rules={[{ required: true, message: '请输入城市' }]}
-            >
-              <Input placeholder="Brisbane" />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item label="州/省" name={['businessAddress', 'state']}>
-              <Input placeholder="QLD" />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item label="邮编" name={['businessAddress', 'postcode']}>
-              <Input placeholder="4000" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Form.Item 
-          label="国家 *" 
-          name={['businessAddress', 'country']} 
-          rules={[{ required: true, message: '请输入国家' }]}
-        >
-          <Input placeholder="Australia" />
-        </Form.Item>
+        <Divider orientation="left">企业信息 / Business Information</Divider>
 
         <Row gutter={16}>
           <Col span={12}>
@@ -458,61 +394,6 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
             <Option value="potential">Potential 潜在客户</Option>
             <Option value="blacklist">Blacklist 黑名单</Option>
           </Select>
-        </Form.Item>
-
-        <Divider orientation="left">银行信息 *</Divider>
-
-        <Form.Item 
-          label="受益人银行名称 *" 
-          name={['bankInfo', 'beneficiaryBankName']} 
-          rules={[{ required: true, message: '请输入受益人银行名称' }]}
-        >
-          <Input placeholder="Commonwealth Bank of Australia" />
-        </Form.Item>
-
-        <Form.Item 
-          label="受益人银行地址 *" 
-          name={['bankInfo', 'beneficiaryBankAddress']} 
-          rules={[{ required: true, message: '请输入受益人银行地址' }]}
-        >
-          <Input placeholder="240 Queen Street, Brisbane QLD 4000" />
-        </Form.Item>
-
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item 
-              label="受益人银行代码 *" 
-              name={['bankInfo', 'beneficiaryBankCode']} 
-              rules={[{ required: true, message: '请输入受益人银行代码' }]}
-            >
-              <Input placeholder="062" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item 
-              label="SWIFT代码 *" 
-              name={['bankInfo', 'swiftCode']} 
-              rules={[{ required: true, message: '请输入SWIFT代码' }]}
-            >
-              <Input placeholder="CTBAAU2S" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Form.Item 
-          label="受益人账户名称 *" 
-          name={['bankInfo', 'beneficiaryAccountName']} 
-          rules={[{ required: true, message: '请输入受益人账户名称' }]}
-        >
-          <Input placeholder="Company Name Pty Ltd" />
-        </Form.Item>
-
-        <Form.Item 
-          label="受益人账户号码 *" 
-          name={['bankInfo', 'beneficiaryAccountNumber']} 
-          rules={[{ required: true, message: '请输入受益人账户号码' }]}
-        >
-          <Input placeholder="062-001-12345678" />
         </Form.Item>
 
         <Form.Item label="备注" name="notes">

@@ -1,169 +1,207 @@
 import React from 'react'
-import { Card, Table, DatePicker, InputNumber, Checkbox, Space } from 'antd'
+import { Card, Table, Tag, DatePicker, Button, Switch, ColorPicker } from 'antd'
+import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { ScheduleItem } from '../../types/project'
 
 interface ProjectScheduleProps {
   scheduleItems: ScheduleItem[]
   onScheduleChange: (items: ScheduleItem[]) => void
-  autoSchedulePhases: (items: ScheduleItem[]) => ScheduleItem[]
 }
 
 const ProjectSchedule: React.FC<ProjectScheduleProps> = ({
   scheduleItems,
-  onScheduleChange,
-  autoSchedulePhases
+  onScheduleChange
 }) => {
-  const handleDateChange = (index: number, field: 'startDate' | 'endDate', newDate: dayjs.Dayjs | null) => {
-    const updated = [...scheduleItems]
-    updated[index][field] = newDate?.format('YYYY-MM-DD') || updated[index][field]
-    onScheduleChange(updated)
-  }
-
-  const handleDurationChange = (index: number, value: number | null) => {
-    const updated = [...scheduleItems]
-    updated[index].duration = value || updated[index].duration
-    // 重新计算结束日期
-    const startDate = dayjs(updated[index].startDate)
-    updated[index].endDate = startDate.add((value || updated[index].duration) - 1, 'day').format('YYYY-MM-DD')
-    onScheduleChange(updated)
-  }
-
-  const handleAutoScheduleChange = (index: number, checked: boolean) => {
-    const updated = [...scheduleItems]
-    updated[index].autoSchedule = checked
-    
-    if (checked && index > 0) {
-      // 如果勾选自动调度，自动计算该阶段的时间
-      const prevPhase = updated[index - 1]
-      const startDate = dayjs(prevPhase.endDate).add(1, 'day')
-      updated[index].startDate = startDate.format('YYYY-MM-DD')
-      updated[index].endDate = startDate.add(updated[index].duration - 1, 'day').format('YYYY-MM-DD')
-      
-      // 重新调度后续的自动调度阶段
-      onScheduleChange(autoSchedulePhases(updated))
-    } else {
-      onScheduleChange(updated)
+  const addScheduleItem = () => {
+    const newItem: ScheduleItem = {
+      id: Date.now().toString(),
+      phase: '新阶段',
+      startDate: dayjs().format('YYYY-MM-DD'),
+      endDate: dayjs().add(7, 'day').format('YYYY-MM-DD'),
+      color: '#1890ff',
+      autoSchedule: false,
+      duration: 7
     }
+    onScheduleChange([...scheduleItems, newItem])
+  }
+
+  const updateScheduleItem = (id: string, field: keyof ScheduleItem, value: any) => {
+    const updatedItems = scheduleItems.map(item => {
+      if (item.id === id) {
+        const updated = { ...item, [field]: value }
+        
+        // 如果修改了开始日期或结束日期，重新计算duration
+        if (field === 'startDate' || field === 'endDate') {
+          const start = dayjs(field === 'startDate' ? value : item.startDate)
+          const end = dayjs(field === 'endDate' ? value : item.endDate)
+          updated.duration = end.diff(start, 'day') + 1
+        }
+        
+        return updated
+      }
+      return item
+    })
+    onScheduleChange(updatedItems)
+  }
+
+  const deleteScheduleItem = (id: string) => {
+    const updatedItems = scheduleItems.filter(item => item.id !== id)
+    onScheduleChange(updatedItems)
   }
 
   const columns = [
     {
-      title: '项目阶段',
+      title: '阶段名称',
       dataIndex: 'phase',
+      key: 'phase',
+      width: 200,
       render: (text: string, record: ScheduleItem) => (
-        <Space>
-          <div style={{ 
-            width: 8, 
-            height: 8, 
-            backgroundColor: record.color, 
-            borderRadius: '50%', 
-            marginRight: 8 
-          }} />
-          <span style={{ fontWeight: 500 }}>{text}</span>
-        </Space>
+        <input
+          value={text}
+          onChange={(e) => updateScheduleItem(record.id, 'phase', e.target.value)}
+          style={{
+            border: 'none',
+            background: 'transparent',
+            width: '100%',
+            fontWeight: 500
+          }}
+        />
       ),
     },
     {
       title: '开始日期',
       dataIndex: 'startDate',
-      render: (date: string, record: ScheduleItem, index: number) => (
+      key: 'startDate',
+      width: 150,
+      render: (date: string, record: ScheduleItem) => (
         <DatePicker
           value={dayjs(date)}
-          onChange={(newDate) => handleDateChange(index, 'startDate', newDate)}
-          disabled={record.autoSchedule}
+          onChange={(value) => updateScheduleItem(record.id, 'startDate', value?.format('YYYY-MM-DD'))}
+          size="small"
+          style={{ width: '100%' }}
         />
       ),
     },
     {
       title: '结束日期',
       dataIndex: 'endDate',
-      render: (date: string, record: ScheduleItem, index: number) => (
+      key: 'endDate',
+      width: 150,
+      render: (date: string, record: ScheduleItem) => (
         <DatePicker
           value={dayjs(date)}
-          onChange={(newDate) => handleDateChange(index, 'endDate', newDate)}
-          disabled={record.autoSchedule}
+          onChange={(value) => updateScheduleItem(record.id, 'endDate', value?.format('YYYY-MM-DD'))}
+          size="small"
+          style={{ width: '100%' }}
         />
       ),
     },
     {
       title: '工期',
-      render: (_: any, record: ScheduleItem, index: number) => {
-        if (record.autoSchedule) {
-          // 自动调度时显示默认工期并允许修改
-          return (
-            <InputNumber
-              value={record.duration}
-              min={1}
-              max={30}
-              suffix="天"
-              size="small"
-              style={{ width: 80 }}
-              onChange={(value) => handleDurationChange(index, value)}
-            />
-          )
-        } else {
-          // 手动设置时显示实际工期
-          const start = dayjs(record.startDate)
-          const end = dayjs(record.endDate)
-          const days = end.diff(start, 'day') + 1
-          return <span>{days} 天</span>
-        }
-      },
+      dataIndex: 'duration',
+      key: 'duration',
+      width: 80,
+      render: (duration: number) => (
+        <Tag color="blue">{duration}天</Tag>
+      ),
     },
     {
-      title: '自动调度',
+      title: '颜色',
+      dataIndex: 'color',
+      key: 'color',
+      width: 100,
+      render: (color: string, record: ScheduleItem) => (
+        <div style={{
+          width: 30,
+          height: 20,
+          backgroundColor: color,
+          borderRadius: 4,
+          border: '1px solid #d9d9d9',
+          cursor: 'pointer'
+        }} />
+      ),
+    },
+    {
+      title: '自动排期',
       dataIndex: 'autoSchedule',
-      render: (auto: boolean, record: ScheduleItem, index: number) => (
-        <Checkbox
-          checked={auto}
-          onChange={(e) => handleAutoScheduleChange(index, e.target.checked)}
-          disabled={index === 0} // 第一个阶段不能设置自动调度
-        >
-          自动安排
-        </Checkbox>
+      key: 'autoSchedule',
+      width: 100,
+      render: (autoSchedule: boolean, record: ScheduleItem) => (
+        <Switch
+          checked={autoSchedule}
+          onChange={(checked) => updateScheduleItem(record.id, 'autoSchedule', checked)}
+          size="small"
+        />
+      ),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 80,
+      render: (_, record: ScheduleItem) => (
+        <Button
+          type="text"
+          danger
+          size="small"
+          icon={<DeleteOutlined />}
+          onClick={() => deleteScheduleItem(record.id)}
+        />
       ),
     },
   ]
 
-  const getTotalDuration = () => {
-    const start = dayjs(scheduleItems[0].startDate)
-    const end = dayjs(scheduleItems[scheduleItems.length - 1].endDate)
-    return end.diff(start, 'day') + 1
-  }
-
   return (
-    <Card title="项目时间安排" style={{ marginTop: 24 }}>
-      <div style={{ marginBottom: 24 }}>
-        <h4>项目阶段时间规划</h4>
-        <p style={{ color: '#8c8c8c', fontSize: 14 }}>
-          请设置项目各个阶段的时间安排。系统将根据您的设置自动生成甘特图。
-        </p>
-      </div>
-
-      {/* 时间安排表格 */}
+    <Card 
+      title="项目时间安排" 
+      style={{ marginTop: 24 }}
+      extra={
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={addScheduleItem}
+        >
+          添加阶段
+        </Button>
+      }
+    >
       <Table
-        dataSource={scheduleItems}
         columns={columns}
+        dataSource={scheduleItems}
+        rowKey="id"
         pagination={false}
-        footer={() => (
-          <div style={{ 
-            padding: '16px',
-            background: '#f8f9fa',
-            borderRadius: '4px',
-            border: '1px solid #e9ecef'
-          }}>
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <div style={{ fontWeight: 500 }}>时间安排说明：</div>
-              <div style={{ fontSize: 12, color: '#8c8c8c' }}>
-                • 项目报备阶段为固定阶段，不可设置自动调度<br/>
-                • 勾选"自动安排"的阶段将根据前一阶段的结束时间自动计算开始时间<br/>
-                • 项目总工期：{getTotalDuration()} 天
-              </div>
-            </Space>
-          </div>
-        )}
+        size="small"
+        style={{ marginBottom: 16 }}
       />
+      
+      <div style={{
+        background: '#f5f5f5',
+        padding: 16,
+        borderRadius: 8,
+        marginTop: 16
+      }}>
+        <h4 style={{ margin: '0 0 8px 0' }}>时间轴预览</h4>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {scheduleItems.map((item) => (
+            <div
+              key={item.id}
+              style={{
+                padding: '8px 12px',
+                backgroundColor: item.color,
+                color: 'white',
+                borderRadius: 4,
+                fontSize: '12px',
+                fontWeight: 500
+              }}
+            >
+              {item.phase}
+              <div style={{ fontSize: '10px', opacity: 0.9, marginTop: 2 }}>
+                {dayjs(item.startDate).format('MM/DD')} - {dayjs(item.endDate).format('MM/DD')}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </Card>
   )
 }

@@ -79,11 +79,8 @@ const ClientTable: React.FC<ClientTableProps> = ({
             <div style={{ fontWeight: 500, fontSize: 14 }}>
               {record.companyName}
             </div>
-            <div style={{ color: '#666', fontSize: 12 }}>
-              {record.companyNameCN}
-            </div>
-            <div style={{ color: '#999', fontSize: 12 }}>
-              {record.contactPerson} ({record.contactPersonCN})
+            <div style={{ color: '#666', fontSize: 12, marginTop: 2 }}>
+              {record.contactPerson}
             </div>
           </div>
         </div>

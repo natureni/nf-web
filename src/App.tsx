@@ -13,6 +13,8 @@ import {
   SettingOutlined,
   GlobalOutlined
 } from '@ant-design/icons'
+import { StagewiseToolbar } from '@stagewise/toolbar-react'
+import ReactPlugin from '@stagewise-plugins/react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import UserProfile from './components/UserProfile'
@@ -293,10 +295,10 @@ const AppContent: React.FC = () => {
               />
               
               <Route 
-                path="/projects/create/:id" 
+                path="/projects/edit/:id" 
                 element={
                   <ProtectedRoute module="projects" action="edit">
-                    <CreateProject />
+                    <EditProject />
                   </ProtectedRoute>
                 } 
               />
@@ -405,6 +407,11 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <AppContent />
+      <StagewiseToolbar 
+        config={{
+          plugins: [ReactPlugin]
+        }}
+      />
     </AuthProvider>
   )
 }

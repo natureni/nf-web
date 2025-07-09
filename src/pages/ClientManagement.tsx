@@ -70,23 +70,12 @@ const ClientManagement: React.FC = () => {
   const clients: Client[] = [
     {
       id: '1',
-      companyName: 'URBIS',
-      companyNameCN: '澳洲城市规划设计公司',
-      contactPerson: 'David Johnson',
-      contactPersonCN: '大卫·约翰逊',
-      title: 'Senior Partner',
-      titleCN: '高级合伙人',
+      companyName: 'URBIS 澳洲城市规划设计公司',
+      contactPerson: 'David Johnson 大卫·约翰逊',
+      title: 'Senior Partner 高级合伙人',
       email: 'david.johnson@urbis.com.au',
       phone: '+61 7 3007 3800',
-      fax: '+61 7 3007 3801',
       website: 'https://urbis.com.au',
-      businessAddress: {
-        street: 'Level 15, 500 Queen Street',
-        city: 'Brisbane',
-        state: 'QLD',
-        postcode: '4000',
-        country: 'Australia'
-      },
       region: 'Asia-Pacific',
       timezone: 'AEST (UTC+10)',
       language: ['English', 'Mandarin'],
@@ -109,14 +98,6 @@ const ClientManagement: React.FC = () => {
         currency: 'AUD',
         creditRating: 'A'
       },
-      bankInfo: {
-        beneficiaryBankName: 'Commonwealth Bank of Australia',
-        beneficiaryBankAddress: '240 Queen Street, Brisbane QLD 4000',
-        beneficiaryBankCode: '062',
-        swiftCode: 'CTBAAU2S',
-        beneficiaryAccountName: 'URBIS Pty Ltd',
-        beneficiaryAccountNumber: '062-001-12345678'
-      },
       tags: ['VIP客户', '长期合作', '大型项目'],
       notes: '重要客户，澳洲知名城市规划设计公司，项目质量要求高，付款及时。',
       status: 'active',
@@ -125,22 +106,12 @@ const ClientManagement: React.FC = () => {
     },
     {
       id: '2',
-      companyName: 'Bathurst Development Corp',
-      companyNameCN: '巴瑟斯特开发公司',
-      contactPerson: 'Sarah Mitchell',
-      contactPersonCN: '萨拉·米切尔',
-      title: 'Development Manager',
-      titleCN: '开发经理',
+      companyName: 'Bathurst Development Corp 巴瑟斯特开发公司',
+      contactPerson: 'Sarah Mitchell 萨拉·米切尔',
+      title: 'Development Manager 开发经理',
       email: 'sarah.mitchell@bathurst.com',
       phone: '+61 2 6331 8900',
       website: 'https://bathurst-development.com',
-      businessAddress: {
-        street: '123 George Street',
-        city: 'Bathurst',
-        state: 'NSW',
-        postcode: '2795',
-        country: 'Australia'
-      },
       region: 'Asia-Pacific',
       timezone: 'AEST (UTC+10)',
       language: ['English'],
@@ -163,14 +134,6 @@ const ClientManagement: React.FC = () => {
         currency: 'AUD',
         creditRating: 'B'
       },
-      bankInfo: {
-        beneficiaryBankName: 'Westpac Banking Corporation',
-        beneficiaryBankAddress: '275 Kent Street, Sydney NSW 2000',
-        beneficiaryBankCode: '032',
-        swiftCode: 'WPACAU2S',
-        beneficiaryAccountName: 'Bathurst Development Corp Pty Ltd',
-        beneficiaryAccountNumber: '032-002-87654321'
-      },
       tags: ['中型项目', '稳定客户'],
       notes: '地区性开发商，项目规模适中，合作关系良好。',
       status: 'active',
@@ -179,22 +142,12 @@ const ClientManagement: React.FC = () => {
     },
     {
       id: '3',
-      companyName: 'NCCEC Group',
-      companyNameCN: '中国建筑工程集团',
-      contactPerson: 'Wang Lei',
-      contactPersonCN: '王磊',
-      title: 'Project Director',
-      titleCN: '项目总监',
+      companyName: 'NCCEC Group 中国建筑工程集团',
+      contactPerson: 'Wang Lei 王磊',
+      title: 'Project Director 项目总监',
       email: 'wang.lei@nccec.com.cn',
       phone: '+86 10 8888 9999',
       website: 'https://nccec.com.cn',
-      businessAddress: {
-        street: '1 Sanlihe Road',
-        city: 'Beijing',
-        state: 'Beijing',
-        postcode: '100037',
-        country: 'China'
-      },
       region: 'Asia-Pacific',
       timezone: 'CST (UTC+8)',
       language: ['Mandarin', 'English'],
@@ -217,14 +170,6 @@ const ClientManagement: React.FC = () => {
         currency: 'CNY',
         creditRating: 'A'
       },
-      bankInfo: {
-        beneficiaryBankName: 'Bank of China',
-        beneficiaryBankAddress: '1 Fuxingmen Nei Dajie, Beijing 100818',
-        beneficiaryBankCode: '104',
-        swiftCode: 'BKCHCNBJ',
-        beneficiaryAccountName: 'NCCEC Group Co Ltd',
-        beneficiaryAccountNumber: '104-001-99887766'
-      },
       tags: ['国际客户', '大型项目', '文化建筑'],
       notes: '中国大型建筑集团，主要承接文化建筑和公共建筑项目。',
       status: 'active',
@@ -233,22 +178,12 @@ const ClientManagement: React.FC = () => {
     },
     {
       id: '4',
-      companyName: 'Norwell Properties',
-      companyNameCN: '诺威尔地产',
-      contactPerson: 'Michael Chen',
-      contactPersonCN: '陈迈克',
-      title: 'CEO',
-      titleCN: '首席执行官',
+      companyName: 'Norwell Properties 诺威尔地产',
+      contactPerson: 'Michael Chen 陈迈克',
+      title: 'CEO 首席执行官',
       email: 'michael.chen@norwell.com',
       phone: '+1 604 123 4567',
       website: 'https://norwell-properties.com',
-      businessAddress: {
-        street: '1055 West Georgia Street',
-        city: 'Vancouver',
-        state: 'BC',
-        postcode: 'V6E 3P3',
-        country: 'Canada'
-      },
       region: 'North-America',
       timezone: 'PST (UTC-8)',
       language: ['English', 'Mandarin'],
@@ -271,14 +206,6 @@ const ClientManagement: React.FC = () => {
         currency: 'CAD',
         creditRating: 'A'
       },
-      bankInfo: {
-        beneficiaryBankName: 'Royal Bank of Canada',
-        beneficiaryBankAddress: '200 Bay Street, Toronto ON M5J 2J5',
-        beneficiaryBankCode: '003',
-        swiftCode: 'ROYCCAT2',
-        beneficiaryAccountName: 'Norwell Properties Inc',
-        beneficiaryAccountNumber: '003-001-55443322'
-      },
       tags: ['度假项目', '豪华住宅', '美国客户'],
       notes: '专注于度假村和豪华住宅项目的北美开发商。',
       status: 'active',
@@ -287,22 +214,12 @@ const ClientManagement: React.FC = () => {
     },
     {
       id: '5',
-      companyName: 'Olympic Club International',
-      companyNameCN: '奥林匹克俱乐部国际',
-      contactPerson: 'Robert Taylor',
-      contactPersonCN: '罗伯特·泰勒',
-      title: 'Facilities Manager',
-      titleCN: '设施经理',
+      companyName: 'Olympic Club International 奥林匹克俱乐部国际',
+      contactPerson: 'Robert Taylor 罗伯特·泰勒',
+      title: 'Facilities Manager 设施经理',
       email: 'robert.taylor@olympic-club.com',
       phone: '+1 415 555 0123',
       website: 'https://olympic-club.com',
-      businessAddress: {
-        street: '524 Post Street',
-        city: 'San Francisco',
-        state: 'CA',
-        postcode: '94102',
-        country: 'USA'
-      },
       region: 'North-America',
       timezone: 'PST (UTC-8)',
       language: ['English'],
@@ -325,14 +242,6 @@ const ClientManagement: React.FC = () => {
         currency: 'USD',
         creditRating: 'A'
       },
-      bankInfo: {
-        beneficiaryBankName: 'Wells Fargo Bank',
-        beneficiaryBankAddress: '420 Montgomery Street, San Francisco CA 94104',
-        beneficiaryBankCode: '121',
-        swiftCode: 'WFBIUS6S',
-        beneficiaryAccountName: 'Olympic Club International Inc',
-        beneficiaryAccountNumber: '121-001-11223344'
-      },
       tags: ['体育设施', '娱乐业', '美国客户'],
       notes: '历史悠久的体育俱乐部，专注于体育设施和娱乐场所的开发。',
       status: 'active',
@@ -344,9 +253,7 @@ const ClientManagement: React.FC = () => {
   // 过滤数据
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.companyName.toLowerCase().includes(filters.searchText.toLowerCase()) ||
-                         client.companyNameCN.includes(filters.searchText) ||
-                         client.contactPerson.toLowerCase().includes(filters.searchText.toLowerCase()) ||
-                         client.contactPersonCN.includes(filters.searchText)
+                         client.contactPerson.toLowerCase().includes(filters.searchText.toLowerCase())
     const matchesRegion = !filters.regionFilter || client.region === filters.regionFilter
     const matchesStatus = !filters.statusFilter || client.status === filters.statusFilter
     return matchesSearch && matchesRegion && matchesStatus

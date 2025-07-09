@@ -1,22 +1,11 @@
 export interface Client {
   id: string
   companyName: string
-  companyNameCN: string
   contactPerson: string
-  contactPersonCN: string
   title: string
-  titleCN: string
   email: string
   phone: string
-  fax?: string
   website?: string
-  businessAddress: {
-    street: string
-    city: string
-    state: string
-    postcode: string
-    country: string
-  }
   region: 'Asia-Pacific' | 'North-America' | 'Europe' | 'Middle-East' | 'Other'
   timezone: string
   language: string[]
@@ -38,14 +27,6 @@ export interface Client {
     method: string
     currency: string
     creditRating: 'A' | 'B' | 'C' | 'D'
-  }
-  bankInfo: {
-    beneficiaryBankName: string
-    beneficiaryBankAddress: string
-    beneficiaryBankCode: string
-    swiftCode: string
-    beneficiaryAccountName: string
-    beneficiaryAccountNumber: string
   }
   tags: string[]
   notes: string

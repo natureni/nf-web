@@ -1,3 +1,46 @@
+// 项目状态类型
+export type ProjectStatus = 'reporting' | 'modeling' | 'rendering' | 'delivering' | 'paused'
+
+// 付款状态类型
+export type PaymentStatus = 'unpaid' | 'partial' | 'completed' | 'overdue'
+
+// 项目基础接口
+export interface Project {
+  id: string
+  name: string
+  protocolNumber: string
+  client: string
+  status: ProjectStatus
+  deadline: string
+  budget: number
+  currency: string
+  exchangeRate: number
+  budgetCNY: number
+  paymentStatus: PaymentStatus
+  progress: number
+  type: string
+  createdAt?: string
+  updatedAt?: string
+  completedDate?: string
+}
+
+// 合同服务项目接口
+export interface ContractService {
+  camera: string
+  qty: number
+  unitPrice: number
+  price: number
+}
+
+// 合同信息接口
+export interface ContractInfo {
+  project: Project
+  services: ContractService[]
+  discount: number
+  total: number
+  invoiceNumber: string
+}
+
 // 汇率接口
 export interface ExchangeRate {
   currency: string
@@ -7,21 +50,6 @@ export interface ExchangeRate {
   lastUpdated?: string
   region?: string
   flag?: string
-}
-
-// 客户接口
-export interface Client {
-  id: string
-  companyName: string
-  companyNameCN: string
-  contactPerson: string
-  preferredCurrency: string
-  projectPreferences: {
-    style: string[]
-    budget: string | string[]
-    timeline: string | string[]
-    communication: string | string[]
-  }
 }
 
 // 团队成员接口
@@ -50,25 +78,6 @@ export interface DepartmentCost {
   totalCost: number
 }
 
-// 项目接口
-export interface Project {
-  id: string
-  name: string
-  protocolNumber: string
-  client: string
-  status: 'reporting' | 'modeling' | 'rendering' | 'delivering'
-  deadline: string
-  budget: number
-  currency: string
-  exchangeRate: number
-  budgetCNY: number
-  paymentStatus: 'unpaid' | 'partial' | 'completed' | 'overdue'
-  progress: number
-  type: string
-  createdAt?: string
-  updatedAt?: string
-}
-
 // 时间安排项目接口
 export interface ScheduleItem {
   id: string
@@ -78,4 +87,56 @@ export interface ScheduleItem {
   color: string
   autoSchedule: boolean
   duration: number
+}
+
+// 甘特图任务单元格接口
+export interface TaskCell {
+  type: 'M' | 'R' | 'F' | 'P' | 'notice' | 'empty'
+  count?: number
+  note?: string
+}
+
+// 甘特图项目接口
+export interface GanttProject {
+  id: string
+  name: string
+  client: string
+  status: ProjectStatus
+  startDate: string
+  endDate: string
+  manager: string
+  schedule: { [date: string]: TaskCell }
+}
+
+// 项目筛选接口
+export interface ProjectFilters {
+  searchText: string
+  statusFilter: string
+  clientFilter: string
+}
+
+// 预算配置接口
+export interface BudgetConfig {
+  birdViewPrice: number
+  humanViewPrice: number
+  animationPrice: number
+  birdViewDiscount: number
+  humanViewDiscount: number
+  animationDiscount: number
+  currency: string
+}
+
+// 图量信息接口
+export interface ImageQuantity {
+  birdViewCount: number
+  humanViewCount: number
+  animationDuration: number
+}
+
+// 系统设置接口
+export interface SystemSettings {
+  exchangeRates: ExchangeRate[]
+  autoUpdate: boolean
+  baseCurrency: string
+  lastSyncTime?: string
 } 

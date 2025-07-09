@@ -53,31 +53,19 @@ const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
         <TabPane tab="基本信息 / Basic Info" key="basic">
           <Descriptions column={2} bordered>
             <Descriptions.Item label="公司名称 / Company" span={2}>
-              <div>
-                <div style={{ fontWeight: 500, fontSize: 16 }}>{client.companyName}</div>
-                <div style={{ color: '#666', fontSize: 14, marginTop: 4 }}>{client.companyNameCN}</div>
-              </div>
+              <div style={{ fontWeight: 500, fontSize: 16 }}>{client.companyName}</div>
             </Descriptions.Item>
             <Descriptions.Item label="联系人 / Contact">
-              <div>
-                <div style={{ fontWeight: 500 }}>{client.contactPerson}</div>
-                <div style={{ color: '#666', fontSize: 12 }}>{client.contactPersonCN}</div>
-              </div>
+              <div style={{ fontWeight: 500 }}>{client.contactPerson}</div>
             </Descriptions.Item>
             <Descriptions.Item label="职位 / Title">
-              <div>
-                <div>{client.title}</div>
-                <div style={{ color: '#666', fontSize: 12 }}>{client.titleCN}</div>
-              </div>
+              <div>{client.title}</div>
             </Descriptions.Item>
             <Descriptions.Item label="邮箱 / Email">
               <a href={`mailto:${client.email}`}>{client.email}</a>
             </Descriptions.Item>
             <Descriptions.Item label="电话 / Phone">
               <a href={`tel:${client.phone}`}>{client.phone}</a>
-            </Descriptions.Item>
-            <Descriptions.Item label="传真 / Fax">
-              {client.fax || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="网站 / Website">
               {client.website ? (
@@ -107,35 +95,6 @@ const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
               ))}
             </Descriptions.Item>
           </Descriptions>
-        </TabPane>
-
-        <TabPane tab="企业地址 / Business Address" key="address">
-          <Card size="small" title="企业注册地址 / Business Registration Address">
-            <Descriptions column={1} size="middle" bordered>
-              <Descriptions.Item label="完整地址 / Full Address">
-                <div style={{ lineHeight: 1.6 }}>
-                  <div style={{ fontWeight: 500 }}>{client.businessAddress.street}</div>
-                  <div>{client.businessAddress.city}, {client.businessAddress.state} {client.businessAddress.postcode}</div>
-                  <div style={{ color: '#1890ff', fontWeight: 500 }}>{client.businessAddress.country}</div>
-                </div>
-              </Descriptions.Item>
-              <Descriptions.Item label="街道地址 / Street Address">
-                {client.businessAddress.street}
-              </Descriptions.Item>
-              <Descriptions.Item label="城市 / City">
-                {client.businessAddress.city}
-              </Descriptions.Item>
-              <Descriptions.Item label="州/省 / State">
-                {client.businessAddress.state}
-              </Descriptions.Item>
-              <Descriptions.Item label="邮编 / Postcode">
-                {client.businessAddress.postcode}
-              </Descriptions.Item>
-              <Descriptions.Item label="国家 / Country">
-                {client.businessAddress.country}
-              </Descriptions.Item>
-            </Descriptions>
-          </Card>
         </TabPane>
 
         <TabPane tab="项目偏好 / Preferences" key="preferences">
@@ -239,7 +198,7 @@ const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
         </TabPane>
 
         <TabPane tab="财务信息 / Financial Info" key="financial">
-          <Card size="small" title="付款信息 / Payment Information" style={{ marginBottom: 16 }}>
+          <Card size="small" title="付款信息 / Payment Information">
             <Descriptions column={2} bordered>
               <Descriptions.Item label="付款条款 / Payment Terms">
                 {client.paymentInfo.terms}
@@ -258,29 +217,6 @@ const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
                 }>
                   {client.paymentInfo.creditRating}
                 </Tag>
-              </Descriptions.Item>
-            </Descriptions>
-          </Card>
-
-          <Card size="small" title="银行信息 / Bank Information">
-            <Descriptions column={1} bordered>
-              <Descriptions.Item label="受益人银行名称 / Beneficiary Bank Name">
-                {client.bankInfo.beneficiaryBankName}
-              </Descriptions.Item>
-              <Descriptions.Item label="受益人银行地址 / Beneficiary Bank Address">
-                {client.bankInfo.beneficiaryBankAddress}
-              </Descriptions.Item>
-              <Descriptions.Item label="受益人银行代码 / Beneficiary Bank Code">
-                {client.bankInfo.beneficiaryBankCode}
-              </Descriptions.Item>
-              <Descriptions.Item label="SWIFT代码 / SWIFT Code">
-                {client.bankInfo.swiftCode}
-              </Descriptions.Item>
-              <Descriptions.Item label="受益人账户名称 / Beneficiary Account Name">
-                {client.bankInfo.beneficiaryAccountName}
-              </Descriptions.Item>
-              <Descriptions.Item label="受益人账户号码 / Beneficiary Account Number">
-                {client.bankInfo.beneficiaryAccountNumber}
               </Descriptions.Item>
             </Descriptions>
           </Card>

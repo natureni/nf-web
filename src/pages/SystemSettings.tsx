@@ -14,6 +14,7 @@ import {
   Divider,
   Modal,
   InputNumber,
+  Tag,
 } from 'antd'
 import {
   DollarOutlined,
@@ -25,6 +26,9 @@ import {
   LockOutlined,
   UnlockOutlined,
   SettingOutlined,
+  CloudSyncOutlined,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
 } from '@ant-design/icons'
 
 // 导入类型定义
@@ -35,6 +39,15 @@ import ExchangeRateForm from '../components/settings/ExchangeRateForm'
 import ExchangeRateTable from '../components/settings/ExchangeRateTable'
 import SystemConfigPanel from '../components/settings/SystemConfigPanel'
 
+// 导入汇率工具函数
+import { 
+  syncRealTimeExchangeRates, 
+  autoUpdateExchangeRatesIfNeeded,
+  shouldUpdateExchangeRates,
+  getSystemSettings,
+  saveSystemSettings
+} from '../utils/exchangeRates'
+
 const { Title, Text } = Typography
 
 const SystemSettings: React.FC = () => {
@@ -44,6 +57,8 @@ const SystemSettings: React.FC = () => {
   const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(false)
   const [fixedRateMode, setFixedRateMode] = useState(false)
   const [fixedRateModalVisible, setFixedRateModalVisible] = useState(false)
+  const [lastSyncTime, setLastSyncTime] = useState<string>('')
+  const [syncStatus, setSyncStatus] = useState<'success' | 'error' | 'never'>('never')
 
   // 默认汇率数据（相对于人民币CNY）
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([
@@ -86,7 +101,7 @@ const SystemSettings: React.FC = () => {
       // 更新汇率数据
       const updatedRates = exchangeRates.map(rate => ({
         ...rate,
-        rate: values[rate.currencyCode] || rate.rate,
+        rate: rate.currencyCode === 'CNY' ? 1.0 : (values[rate.currencyCode] || rate.rate), // 确保CNY始终为1.0
         lastUpdated: new Date().toISOString()
       }))
       
@@ -99,9 +114,9 @@ const SystemSettings: React.FC = () => {
         autoUpdate: autoUpdateEnabled,
         fixedRateMode: fixedRateMode,
         baseCurrency: 'CNY',
-        lastSyncTime: new Date().toISOString()
+        lastSyncTime: lastSyncTime || new Date().toISOString()
       }
-      localStorage.setItem('systemSettings', JSON.stringify(settings))
+      saveSystemSettings(settings)
       
       message.success('汇率设置保存成功！')
     } catch (error) {
@@ -119,7 +134,7 @@ const SystemSettings: React.FC = () => {
       // 更新固定汇率数据
       const updatedFixedRates = exchangeRates.map(rate => ({
         ...rate,
-        rate: values[rate.currencyCode] || rate.rate,
+        rate: rate.currencyCode === 'CNY' ? 1.0 : (values[rate.currencyCode] || rate.rate), // 确保CNY始终为1.0
         lastUpdated: new Date().toISOString()
       }))
       
@@ -132,9 +147,9 @@ const SystemSettings: React.FC = () => {
         autoUpdate: autoUpdateEnabled,
         fixedRateMode: fixedRateMode,
         baseCurrency: 'CNY',
-        lastSyncTime: new Date().toISOString()
+        lastSyncTime: lastSyncTime || new Date().toISOString()
       }
-      localStorage.setItem('systemSettings', JSON.stringify(settings))
+      saveSystemSettings(settings)
       
       setFixedRateModalVisible(false)
       message.success('固定汇率设置保存成功！')
@@ -149,34 +164,37 @@ const SystemSettings: React.FC = () => {
     message.info('已重置为默认汇率')
   }
 
-  // 从API获取最新汇率（模拟）
+  // 从API获取最新汇率（真实API）
   const handleSyncRates = async () => {
     try {
       setLoading(true)
-      message.loading('正在同步最新汇率...', 2)
+      const hideLoading = message.loading('正在从API获取最新汇率...', 0)
       
-      // 模拟API调用延迟
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // 调用真实的汇率API
+      const result = await syncRealTimeExchangeRates()
       
-      // 模拟汇率波动（±5%）
-      const updatedRates = exchangeRates.map(rate => ({
-        ...rate,
-        rate: Number((rate.rate * (0.95 + Math.random() * 0.1)).toFixed(4)),
-        lastUpdated: new Date().toISOString()
-      }))
+      hideLoading()
       
-      setExchangeRates(updatedRates)
-      
-      // 更新表单值
-      const formValues: any = {}
-      updatedRates.forEach(rate => {
-        formValues[rate.currencyCode] = rate.rate
-      })
-      form.setFieldsValue(formValues)
-      
-      message.success('汇率同步成功！')
+      if (result.success && result.rates) {
+        setExchangeRates(result.rates)
+        setLastSyncTime(new Date().toISOString())
+        setSyncStatus('success')
+        
+        // 更新表单值
+        const formValues: any = {}
+        result.rates.forEach(rate => {
+          formValues[rate.currencyCode] = rate.rate
+        })
+        form.setFieldsValue(formValues)
+        
+        message.success('实时汇率同步成功！数据来源：exchangerate-api.com')
+      } else {
+        setSyncStatus('error')
+        message.error(`汇率同步失败：${result.error || '未知错误'}`)
+      }
     } catch (error) {
-      message.error('汇率同步失败')
+      setSyncStatus('error')
+      message.error('汇率同步失败，请检查网络连接')
     } finally {
       setLoading(false)
     }
@@ -201,6 +219,19 @@ const SystemSettings: React.FC = () => {
     message.info(checked ? '已启用固定汇率模式' : '已切换到实时汇率模式')
   }
 
+  // 切换自动更新
+  const handleToggleAutoUpdate = (checked: boolean) => {
+    setAutoUpdateEnabled(checked)
+    
+    if (checked) {
+      message.info('已启用自动更新，系统将定期获取最新汇率')
+      // 立即检查是否需要更新
+      autoUpdateExchangeRatesIfNeeded()
+    } else {
+      message.info('已关闭自动更新')
+    }
+  }
+
   // 打开固定汇率设置弹窗
   const handleOpenFixedRateModal = () => {
     // 设置表单初始值
@@ -217,30 +248,81 @@ const SystemSettings: React.FC = () => {
   // 初始化表单数据
   useEffect(() => {
     // 从本地存储加载设置
-    const savedSettings = localStorage.getItem('systemSettings')
-    if (savedSettings) {
-      try {
-        const settings: SystemSettingsType = JSON.parse(savedSettings)
-        setExchangeRates(settings.exchangeRates)
-        setFixedExchangeRates(settings.fixedExchangeRates || [])
-        setAutoUpdateEnabled(settings.autoUpdate)
-        setFixedRateMode(settings.fixedRateMode || false)
-      } catch (error) {
-        console.error('加载设置失败:', error)
+    const settings = getSystemSettings()
+    
+    // 自动修复CNY汇率（如果不是1.0）
+    let needsSave = false
+    const fixedExchangeRates = settings.exchangeRates.map(rate => {
+      if (rate.currencyCode === 'CNY' && rate.rate !== 1.0) {
+        console.log(`自动修复CNY汇率: ${rate.rate} -> 1.0`)
+        needsSave = true
+        return { ...rate, rate: 1.0, lastUpdated: new Date().toISOString() }
       }
+      return rate
+    })
+    
+    const fixedFixedRates = (settings.fixedExchangeRates || []).map(rate => {
+      if (rate.currencyCode === 'CNY' && rate.rate !== 1.0) {
+        console.log(`自动修复固定CNY汇率: ${rate.rate} -> 1.0`)
+        needsSave = true
+        return { ...rate, rate: 1.0, lastUpdated: new Date().toISOString() }
+      }
+      return rate
+    })
+    
+    // 如果需要修复，保存修复后的数据
+    if (needsSave) {
+      const correctedSettings = {
+        ...settings,
+        exchangeRates: fixedExchangeRates,
+        fixedExchangeRates: fixedFixedRates
+      }
+      saveSystemSettings(correctedSettings)
+      console.log('CNY汇率已自动修复为1.0')
+    }
+    
+    setExchangeRates(fixedExchangeRates)
+    setFixedExchangeRates(fixedFixedRates)
+    setAutoUpdateEnabled(settings.autoUpdate)
+    setFixedRateMode(settings.fixedRateMode || false)
+    setLastSyncTime(settings.lastSyncTime || '')
+    
+    // 检查汇率数据状态
+    if (settings.lastSyncTime) {
+      const hasErrors = fixedExchangeRates.some(rate => rate.error)
+      setSyncStatus(hasErrors ? 'error' : 'success')
     }
 
     // 设置初始表单值
     const initialValues: any = {}
-    exchangeRates.forEach(rate => {
+    fixedExchangeRates.forEach(rate => {
       initialValues[rate.currencyCode] = rate.rate
     })
     form.setFieldsValue(initialValues)
+    
+    // 如果启用了自动更新，检查是否需要更新汇率
+    if (settings.autoUpdate && !settings.fixedRateMode) {
+      autoUpdateExchangeRatesIfNeeded()
+    }
   }, [])
 
   // 获取当前使用的汇率（固定汇率或实时汇率）
   const getCurrentRates = () => {
     return fixedRateMode && fixedExchangeRates.length > 0 ? fixedExchangeRates : exchangeRates
+  }
+
+  // 格式化最后同步时间
+  const formatLastSyncTime = () => {
+    if (!lastSyncTime) return '从未同步'
+    
+    const syncDate = new Date(lastSyncTime)
+    const now = new Date()
+    const diffMinutes = Math.floor((now.getTime() - syncDate.getTime()) / (1000 * 60))
+    
+    if (diffMinutes < 1) return '刚刚同步'
+    if (diffMinutes < 60) return `${diffMinutes}分钟前`
+    if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}小时前`
+    return syncDate.toLocaleDateString()
   }
 
   const tabItems = [
@@ -261,6 +343,16 @@ const SystemSettings: React.FC = () => {
                 <Space>
                   <BankOutlined />
                   实时汇率设置
+                  {syncStatus === 'success' && (
+                    <Tag color="green" icon={<CheckCircleOutlined />}>
+                      API同步正常
+                    </Tag>
+                  )}
+                  {syncStatus === 'error' && (
+                    <Tag color="red" icon={<ExclamationCircleOutlined />}>
+                      API同步异常
+                    </Tag>
+                  )}
                 </Space>
               }
               extra={
@@ -268,15 +360,15 @@ const SystemSettings: React.FC = () => {
                   <Button 
                     type="primary" 
                     ghost 
-                    icon={<ReloadOutlined />}
+                    icon={<CloudSyncOutlined />}
                     onClick={handleSyncRates}
                     loading={loading}
                     disabled={fixedRateMode}
                   >
-                    同步最新汇率
+                    获取实时汇率
                   </Button>
                   <Button 
-                    icon={<SaveOutlined />}
+                    icon={<ReloadOutlined />}
                     onClick={handleReset}
                   >
                     重置
@@ -293,6 +385,33 @@ const SystemSettings: React.FC = () => {
               }
               style={{ marginBottom: 24 }}
             >
+              {/* 汇率数据状态信息 */}
+              <div style={{ marginBottom: 16 }}>
+                <Alert
+                  message={
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>汇率数据状态</span>
+                      <div style={{ fontSize: '12px' }}>
+                        <span>最后同步: {formatLastSyncTime()}</span>
+                        {shouldUpdateExchangeRates() && (
+                          <Tag color="orange" style={{ marginLeft: 8 }}>数据需要更新</Tag>
+                        )}
+                      </div>
+                    </div>
+                  }
+                  description={
+                    <div>
+                      <div>数据源: exchangerate-api.com (免费API，每月1500次请求)</div>
+                      <div>更新频率: {autoUpdateEnabled ? '自动更新（每小时检查）' : '手动更新'}</div>
+                      {syncStatus === 'success' && <div style={{ color: '#52c41a' }}>✓ 汇率数据已同步</div>}
+                      {syncStatus === 'error' && <div style={{ color: '#ff4d4f' }}>✗ 汇率数据同步失败，使用默认值</div>}
+                    </div>
+                  }
+                  type={syncStatus === 'success' ? 'success' : syncStatus === 'error' ? 'warning' : 'info'}
+                  showIcon
+                />
+              </div>
+
               {fixedRateMode && (
                 <Alert
                   message="当前使用固定汇率模式"
@@ -342,7 +461,7 @@ const SystemSettings: React.FC = () => {
                 message="固定汇率模式说明"
                 description={
                   <div>
-                    <p>• <strong>实时汇率模式</strong>：项目管理使用当前设置的实时汇率进行计算</p>
+                    <p>• <strong>实时汇率模式</strong>：项目管理使用API获取的最新汇率进行计算</p>
                     <p>• <strong>固定汇率模式</strong>：项目管理使用您预设的固定汇率，不受实时汇率变动影响</p>
                     <p>• 固定汇率适用于需要稳定预算计算的长期项目</p>
                   </div>
@@ -436,7 +555,7 @@ const SystemSettings: React.FC = () => {
           <Space>
             <Switch
               checked={autoUpdateEnabled}
-              onChange={setAutoUpdateEnabled}
+              onChange={handleToggleAutoUpdate}
               checkedChildren="自动更新"
               unCheckedChildren="手动更新"
             />

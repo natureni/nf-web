@@ -14,7 +14,10 @@ const ExchangeRateForm: React.FC<ExchangeRateFormProps> = ({
   exchangeRates,
   disabled = false
 }) => {
-  // 按地区分组货币
+  // 获取人民币汇率（基础货币）
+  const baseCurrency = exchangeRates.find(rate => rate.currencyCode === 'CNY')
+  
+  // 按地区分组货币（排除CNY）
   const mainCurrencies = exchangeRates.filter(rate => 
     ['USD', 'AUD', 'EUR', 'GBP', 'CAD', 'NZD'].includes(rate.currencyCode)
   )
@@ -76,8 +79,42 @@ const ExchangeRateForm: React.FC<ExchangeRateFormProps> = ({
       />
 
       <Form form={form} layout="vertical">
+        {/* 基础货币 - 人民币 */}
+        {baseCurrency && (
+          <>
+            <Divider orientation="left">
+              <GlobalOutlined /> 基础货币
+            </Divider>
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item
+                  label={
+                    <Space>
+                      <span>{baseCurrency.flag}</span>
+                      <span>{baseCurrency.currency} ({baseCurrency.currencyCode})</span>
+                      <span style={{ color: '#52c41a', fontSize: '12px' }}>[基础货币]</span>
+                    </Space>
+                  }
+                  name={baseCurrency.currencyCode}
+                  initialValue={1.0}
+                >
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    value={1.0}
+                    precision={4}
+                    addonBefore={baseCurrency.currencySymbol}
+                    addonAfter="¥"
+                    disabled={true}
+                    placeholder="基础货币，固定为1.0"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </>
+        )}
+
         {/* 主要货币 */}
-        <Divider orientation="left">
+        <Divider orientation="left" style={{ marginTop: 32 }}>
           <GlobalOutlined /> 主要货币
         </Divider>
         {renderCurrencyInputs(mainCurrencies)}

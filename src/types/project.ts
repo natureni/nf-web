@@ -58,6 +58,7 @@ export interface ExchangeRate {
   lastUpdated?: string
   region?: string
   flag?: string
+  error?: string // 新增错误信息字段
 }
 
 // 部门成本接口

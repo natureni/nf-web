@@ -22,7 +22,7 @@ import {
   ImageQuantity,
   DepartmentCost 
 } from '../types/project'
-import { getProjectExchangeRates, isFixedRateMode, getRateModeDescription } from '../utils/exchangeRates'
+import { getProjectExchangeRates, isFixedRateMode, getRateModeDescription, autoUpdateExchangeRatesIfNeeded } from '../utils/exchangeRates'
 
 // 导入组件
 import ProjectBasicInfoForm from '../components/project/ProjectBasicInfoForm'
@@ -108,8 +108,16 @@ const CreateProject: React.FC = () => {
 
   // 初始化汇率数据
   useEffect(() => {
-    const projectRates = getProjectExchangeRates()
-    setExchangeRates(projectRates)
+    const initializeExchangeRates = async () => {
+      // 检查并自动更新汇率（如果需要）
+      await autoUpdateExchangeRatesIfNeeded()
+      
+      // 获取最新的汇率数据
+      const projectRates = getProjectExchangeRates()
+      setExchangeRates(projectRates)
+    }
+    
+    initializeExchangeRates()
   }, [])
 
   // 检查是否为编辑模式

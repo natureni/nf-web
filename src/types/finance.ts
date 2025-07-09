@@ -1,18 +1,3 @@
-// 项目接口定义
-export interface Project {
-  id: string
-  name: string
-  protocolNumber: string
-  client: string
-  status: 'reporting' | 'modeling' | 'rendering' | 'delivering'
-  deadline: string
-  budget: number
-  paymentStatus: 'unpaid' | 'partial' | 'completed' | 'overdue'
-  progress: number
-  type: string
-  completedDate?: string // 出图完成日期
-}
-
 // 项目成本结构
 export interface ProjectCost {
   projectId: string

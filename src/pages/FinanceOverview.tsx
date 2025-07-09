@@ -24,7 +24,6 @@ import dayjs from 'dayjs'
 
 // 导入类型定义
 import { 
-  Project, 
   ProjectCost, 
   FixedCost, 
   MonthlyFinance, 
@@ -32,6 +31,7 @@ import {
   CostStructureData,
   TimePeriod 
 } from '../types/finance'
+import { Project } from '../types/project'
 
 // 导入拆分后的组件
 import FinanceStatistics from '../components/finance/FinanceStatistics'

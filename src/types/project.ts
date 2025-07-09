@@ -4,6 +4,13 @@ export type ProjectStatus = 'reporting' | 'modeling' | 'rendering' | 'delivering
 // 付款状态类型
 export type PaymentStatus = 'unpaid' | 'partial' | 'completed' | 'overdue'
 
+// 导入团队成员接口
+import { TeamMember } from './team'
+import { Client } from './client'
+
+// 重新导出以保持向后兼容性
+export type { TeamMember, Client }
+
 // 项目基础接口
 export interface Project {
   id: string
@@ -52,24 +59,6 @@ export interface ExchangeRate {
   flag?: string
 }
 
-// 团队成员接口
-export interface TeamMember {
-  id: string
-  name: string
-  department: string
-  unitPrice: number
-  priceType: 'fixed' | 'percentage'
-  birdViewPrice?: number
-  humanViewPrice?: number
-  animationPrice?: number
-  customPrice?: number
-  cost?: number
-  unit?: string
-  assignedBirdView?: number
-  assignedHumanView?: number
-  assignedAnimation?: number
-}
-
 // 部门成本接口
 export interface DepartmentCost {
   department: string
@@ -94,6 +83,7 @@ export interface TaskCell {
   type: 'M' | 'R' | 'F' | 'P' | 'notice' | 'empty'
   count?: number
   note?: string
+  animationSeconds?: number // 新增动画秒数字段
 }
 
 // 甘特图项目接口
@@ -139,4 +129,5 @@ export interface SystemSettings {
   autoUpdate: boolean
   baseCurrency: string
   lastSyncTime?: string
+  fixedRateMode?: boolean
 } 

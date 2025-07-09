@@ -1,6 +1,5 @@
 import React from 'react'
-import { Table, Tag, Button, Popover } from 'antd'
-import { EyeOutlined, EditOutlined } from '@ant-design/icons'
+import { Table, Tag, Popover } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { GanttProject, TaskCell } from '../../types/project'
@@ -34,17 +33,35 @@ const GanttTable: React.FC<GanttTableProps> = ({
     return configs[status as keyof typeof configs] || { color: '#d9d9d9', text: '未知' }
   }
 
+  // 获取任务显示文本
+  const getTaskDisplayText = (task: TaskCell) => {
+    if (task.type === 'empty') return ''
+    if (task.type === 'notice') return '!'
+    
+    let text = task.type.toUpperCase()
+    if (task.count && task.count > 0) {
+      text += task.count
+    }
+    
+    // 如果有动画秒数，添加到显示文本中
+    if (task.animationSeconds && task.animationSeconds > 0) {
+      text += ` ${task.animationSeconds}s`
+    }
+    
+    return text
+  }
+
   // 获取任务单元格样式
   const getTaskCellStyle = (task: TaskCell) => {
     const baseStyle: React.CSSProperties = {
-      width: 40,
+      width: task.animationSeconds ? 50 : 40, // 有动画时稍微宽一点
       height: 40,
       borderRadius: '50%',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       cursor: 'pointer',
-      fontSize: '12px',
+      fontSize: task.animationSeconds ? '10px' : '12px', // 有动画时字体小一点
       fontWeight: 'bold',
       color: 'white',
       transition: 'all 0.3s ease',
@@ -161,7 +178,7 @@ const GanttTable: React.FC<GanttTableProps> = ({
       key: timePoint.date,
       width: 80,
       align: 'center' as const,
-      render: (_, record: GanttProject) => {
+      render: (_: any, record: GanttProject) => {
         const task = record.schedule[timePoint.date] || { type: 'empty' }
         const isToday = timePoint.isToday
         
@@ -182,9 +199,7 @@ const GanttTable: React.FC<GanttTableProps> = ({
               e.currentTarget.style.boxShadow = isToday ? '0 0 8px rgba(24, 144, 255, 0.3)' : 'none'
             }}
           >
-            {task.type === 'empty' ? '' : 
-             task.type === 'notice' ? '!' : 
-             task.count || task.type}
+            {getTaskDisplayText(task)}
           </div>
         )
 
@@ -224,7 +239,7 @@ const GanttTable: React.FC<GanttTableProps> = ({
         style={{ 
           backgroundColor: '#fff',
         }}
-        rowClassName={(record, index) => 
+        rowClassName={(_, index) => 
           index % 2 === 0 ? 'gantt-row-even' : 'gantt-row-odd'
         }
       />
@@ -238,19 +253,6 @@ const GanttTable: React.FC<GanttTableProps> = ({
           {selectedStatuses.length > 0 ? '没有符合筛选条件的项目' : '暂无项目数据'}
         </div>
       )}
-
-      <style jsx>{`
-        .gantt-row-even {
-          background-color: #fafafa;
-        }
-        .gantt-row-odd {
-          background-color: #ffffff;
-        }
-        .gantt-row-even:hover,
-        .gantt-row-odd:hover {
-          background-color: #e6f7ff !important;
-        }
-      `}</style>
     </div>
   )
 }

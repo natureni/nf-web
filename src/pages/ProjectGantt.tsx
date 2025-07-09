@@ -18,10 +18,11 @@ const ProjectGantt: React.FC = () => {
   const [timeRangeMode, setTimeRangeMode] = useState(7) // 默认7天模式
   const [slidePosition, setSlidePosition] = useState(0) // 滑块位置
   const [editingCell, setEditingCell] = useState<{ projectId: string, date: string } | null>(null)
-  const [editForm, setEditForm] = useState<{ type: string, count: number, note: string }>({
+  const [editForm, setEditForm] = useState<{ type: string, count: number, note: string, animationSeconds?: number }>({
     type: 'M',
     count: 1,
-    note: ''
+    note: '',
+    animationSeconds: 0
   })
   
   // 多状态筛选
@@ -213,13 +214,15 @@ const ProjectGantt: React.FC = () => {
       setEditForm({
         type: currentTask.type,
         count: currentTask.count || 1,
-        note: currentTask.note || ''
+        note: currentTask.note || '',
+        animationSeconds: currentTask.animationSeconds || 0
       })
     } else {
       setEditForm({
         type: 'M',
         count: 1,
-        note: ''
+        note: '',
+        animationSeconds: 0
       })
     }
   }
@@ -238,7 +241,8 @@ const ProjectGantt: React.FC = () => {
           newSchedule[editingCell.date] = {
             type: editForm.type as TaskCell['type'],
             count: editForm.type === 'notice' ? undefined : editForm.count,
-            note: editForm.note || undefined
+            note: editForm.note || undefined,
+            animationSeconds: editForm.animationSeconds || undefined
           }
         }
         
@@ -252,8 +256,55 @@ const ProjectGantt: React.FC = () => {
     message.success('任务更新成功')
   }
 
+  // 智能默认功能：应用到后续阶段
+  const handleSmartDefault = (type: string, count: number) => {
+    if (!editingCell) return
+
+    const project = projects.find(p => p.id === editingCell.projectId)
+    if (!project) return
+
+    const currentDate = dayjs(editingCell.date)
+    const stageOrder = ['M', 'R', 'F'] // 阶段顺序
+    const currentStageIndex = stageOrder.indexOf(type)
+    
+    if (currentStageIndex === -1) return
+
+    const updatedProjects = projects.map(proj => {
+      if (proj.id === editingCell.projectId) {
+        const newSchedule = { ...proj.schedule }
+        
+        // 查找后续的空白日期，按阶段顺序填充
+        let nextStageIndex = currentStageIndex + 1
+        let searchDate = currentDate.add(1, 'day')
+        
+        // 最多向后查找30天
+        for (let i = 0; i < 30 && nextStageIndex < stageOrder.length; i++) {
+          const dateStr = searchDate.format('YYYY-MM-DD')
+          
+          // 如果该日期没有任务，设置为下一阶段
+          if (!newSchedule[dateStr]) {
+            newSchedule[dateStr] = {
+              type: stageOrder[nextStageIndex] as TaskCell['type'],
+              count: count,
+              note: `自动设置 (${count})`
+            }
+            nextStageIndex++
+          }
+          
+          searchDate = searchDate.add(1, 'day')
+        }
+        
+        return { ...proj, schedule: newSchedule }
+      }
+      return proj
+    })
+
+    setProjects(updatedProjects)
+    message.success(`已自动设置后续阶段，数量：${count}`)
+  }
+
   // 批量应用任务
-  const handleBatchApply = (startDate: string, type: string, count: number, duration: number, note: string) => {
+  const handleBatchApply = (startDate: string, type: string, count: number, duration: number, note: string, animationSeconds?: number) => {
     if (!editingCell) return
 
     const updatedProjects = projects.map(project => {
@@ -270,7 +321,8 @@ const ProjectGantt: React.FC = () => {
             newSchedule[currentDate] = {
               type: type as TaskCell['type'],
               count: type === 'notice' ? undefined : count,
-              note: note || undefined
+              note: note || undefined,
+              animationSeconds: animationSeconds || undefined
             }
           }
         }
@@ -282,7 +334,8 @@ const ProjectGantt: React.FC = () => {
 
     setProjects(updatedProjects)
     setEditingCell(null)
-    message.success(`已成功设置 ${duration} 天的任务计划`)
+    const animationText = animationSeconds ? ` (含${animationSeconds}秒动画)` : ''
+    message.success(`已成功设置 ${duration} 天的任务计划${animationText}`)
   }
 
   // 状态筛选选项
@@ -382,6 +435,7 @@ const ProjectGantt: React.FC = () => {
           onSave={handleSaveEdit}
           onCancel={() => setEditingCell(null)}
           onBatchApply={handleBatchApply}
+          onSmartDefault={handleSmartDefault}
         />
 
         {/* 图例说明 */}

@@ -1,22 +1,5 @@
 // 汇率相关的工具函数
-
-interface ExchangeRate {
-  currency: string
-  currencyCode: string
-  currencySymbol: string
-  rate: number
-  lastUpdated?: string
-  region?: string
-  flag?: string
-}
-
-interface SystemSettings {
-  exchangeRates: ExchangeRate[]
-  autoUpdate: boolean
-  baseCurrency: string
-  lastSyncTime?: string
-  fixedRateMode: boolean
-}
+import { ExchangeRate, SystemSettings } from '../types/project'
 
 // 默认汇率设置
 const defaultExchangeRates: ExchangeRate[] = [

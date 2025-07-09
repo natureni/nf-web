@@ -29,6 +29,7 @@ export interface Project {
   createdAt?: string
   updatedAt?: string
   completedDate?: string
+  paidAmount?: number // 已付金额（当paymentStatus为'partial'时使用）
 }
 
 // 合同服务项目接口
@@ -126,8 +127,9 @@ export interface ImageQuantity {
 // 系统设置接口
 export interface SystemSettings {
   exchangeRates: ExchangeRate[]
+  fixedExchangeRates?: ExchangeRate[]
   autoUpdate: boolean
+  fixedRateMode?: boolean
   baseCurrency: string
   lastSyncTime?: string
-  fixedRateMode?: boolean
 } 

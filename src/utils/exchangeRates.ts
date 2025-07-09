@@ -18,10 +18,11 @@ const defaultExchangeRates: ExchangeRate[] = [
 // 默认系统设置
 const defaultSystemSettings: SystemSettings = {
   exchangeRates: defaultExchangeRates,
+  fixedExchangeRates: [],
   autoUpdate: true,
+  fixedRateMode: false,
   baseCurrency: 'CNY',
-  lastSyncTime: new Date().toISOString(),
-  fixedRateMode: false
+  lastSyncTime: new Date().toISOString()
 }
 
 /**
@@ -51,7 +52,8 @@ export const getSystemSettings = (): SystemSettings => {
       return {
         ...defaultSystemSettings,
         ...parsed,
-        exchangeRates: parsed.exchangeRates || defaultExchangeRates
+        exchangeRates: parsed.exchangeRates || defaultExchangeRates,
+        fixedExchangeRates: parsed.fixedExchangeRates || []
       }
     }
     return defaultSystemSettings
@@ -62,11 +64,34 @@ export const getSystemSettings = (): SystemSettings => {
 }
 
 /**
- * 获取当前汇率列表
+ * 获取当前汇率列表（实时汇率）
  * @returns 当前汇率数组
  */
 export const getCurrentExchangeRates = (): ExchangeRate[] => {
   const settings = getSystemSettings()
+  return settings.exchangeRates
+}
+
+/**
+ * 获取固定汇率列表
+ * @returns 固定汇率数组
+ */
+export const getFixedExchangeRates = (): ExchangeRate[] => {
+  const settings = getSystemSettings()
+  return settings.fixedExchangeRates || []
+}
+
+/**
+ * 获取项目管理使用的汇率（根据模式返回固定汇率或实时汇率）
+ * @returns 项目管理使用的汇率数组
+ */
+export const getProjectExchangeRates = (): ExchangeRate[] => {
+  const settings = getSystemSettings()
+  
+  if (settings.fixedRateMode && settings.fixedExchangeRates && settings.fixedExchangeRates.length > 0) {
+    return settings.fixedExchangeRates
+  }
+  
   return settings.exchangeRates
 }
 
@@ -77,6 +102,14 @@ export const getCurrentExchangeRates = (): ExchangeRate[] => {
 export const isFixedRateMode = (): boolean => {
   const settings = getSystemSettings()
   return settings.fixedRateMode || false
+}
+
+/**
+ * 获取汇率模式描述
+ * @returns 汇率模式描述文本
+ */
+export const getRateModeDescription = (): string => {
+  return isFixedRateMode() ? '固定汇率模式' : '实时汇率模式'
 }
 
 /**
@@ -104,18 +137,40 @@ export const updateExchangeRate = (currencyCode: string, newRate: number): void 
 }
 
 /**
- * 获取特定货币的汇率
+ * 获取特定货币的汇率（项目管理使用）
  * @param currencyCode 货币代码
  * @returns 汇率值，如果不存在则返回1
  */
 export const getExchangeRate = (currencyCode: string): number => {
-  const settings = getSystemSettings()
-  const rate = settings.exchangeRates.find(rate => rate.currencyCode === currencyCode)
+  const rates = getProjectExchangeRates()
+  const rate = rates.find(rate => rate.currencyCode === currencyCode)
   return rate ? rate.rate : 1
 }
 
 /**
- * 货币转换
+ * 获取特定货币的实时汇率
+ * @param currencyCode 货币代码
+ * @returns 实时汇率值，如果不存在则返回1
+ */
+export const getRealTimeExchangeRate = (currencyCode: string): number => {
+  const rates = getCurrentExchangeRates()
+  const rate = rates.find(rate => rate.currencyCode === currencyCode)
+  return rate ? rate.rate : 1
+}
+
+/**
+ * 获取特定货币的固定汇率
+ * @param currencyCode 货币代码
+ * @returns 固定汇率值，如果不存在则返回1
+ */
+export const getFixedExchangeRate = (currencyCode: string): number => {
+  const rates = getFixedExchangeRates()
+  const rate = rates.find(rate => rate.currencyCode === currencyCode)
+  return rate ? rate.rate : 1
+}
+
+/**
+ * 货币转换（使用项目管理汇率）
  * @param amount 金额
  * @param fromCurrency 源货币代码
  * @param toCurrency 目标货币代码
@@ -124,6 +179,22 @@ export const getExchangeRate = (currencyCode: string): number => {
 export const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string): number => {
   const fromRate = getExchangeRate(fromCurrency)
   const toRate = getExchangeRate(toCurrency)
+  
+  // 先转换为人民币，再转换为目标货币
+  const cnyAmount = amount * fromRate
+  return cnyAmount / toRate
+}
+
+/**
+ * 货币转换（使用实时汇率）
+ * @param amount 金额
+ * @param fromCurrency 源货币代码
+ * @param toCurrency 目标货币代码
+ * @returns 转换后的金额
+ */
+export const convertCurrencyRealTime = (amount: number, fromCurrency: string, toCurrency: string): number => {
+  const fromRate = getRealTimeExchangeRate(fromCurrency)
+  const toRate = getRealTimeExchangeRate(toCurrency)
   
   // 先转换为人民币，再转换为目标货币
   const cnyAmount = amount * fromRate

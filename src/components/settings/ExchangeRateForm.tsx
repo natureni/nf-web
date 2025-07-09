@@ -6,11 +6,13 @@ import { ExchangeRate } from '../../types/project'
 interface ExchangeRateFormProps {
   form: any
   exchangeRates: ExchangeRate[]
+  disabled?: boolean
 }
 
 const ExchangeRateForm: React.FC<ExchangeRateFormProps> = ({
   form,
-  exchangeRates
+  exchangeRates,
+  disabled = false
 }) => {
   // 按地区分组货币
   const mainCurrencies = exchangeRates.filter(rate => 
@@ -51,6 +53,7 @@ const ExchangeRateForm: React.FC<ExchangeRateFormProps> = ({
               step={0.01}
               addonBefore={rate.currencySymbol}
               addonAfter="¥"
+              disabled={disabled}
             />
           </Form.Item>
         </Col>
@@ -62,8 +65,12 @@ const ExchangeRateForm: React.FC<ExchangeRateFormProps> = ({
     <>
       <Alert
         message="汇率说明"
-        description="当前汇率均相对于人民币(CNY)。修改汇率后请点击保存。系统支持自动同步最新汇率。"
-        type="info"
+        description={
+          disabled 
+            ? "当前为固定汇率模式，实时汇率仅供参考。如需修改，请点击右侧'设置固定汇率'按钮。"
+            : "当前汇率均相对于人民币(CNY)。修改汇率后请点击保存。系统支持自动同步最新汇率。"
+        }
+        type={disabled ? "warning" : "info"}
         showIcon
         style={{ marginBottom: 24 }}
       />

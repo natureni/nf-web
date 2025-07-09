@@ -22,6 +22,7 @@ import {
   ImageQuantity,
   DepartmentCost 
 } from '../types/project'
+import { getProjectExchangeRates, isFixedRateMode, getRateModeDescription } from '../utils/exchangeRates'
 
 // 导入组件
 import ProjectBasicInfoForm from '../components/project/ProjectBasicInfoForm'
@@ -53,8 +54,7 @@ const CreateProject: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false)
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   
-  // 客户和预算相关状态
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  // 预算相关状态
   const [projectBudget, setProjectBudget] = useState<number>(0)
   const [selectedCurrency, setSelectedCurrency] = useState<string>('CNY')
   
@@ -103,60 +103,14 @@ const CreateProject: React.FC = () => {
     },
   ])
 
-  // 客户数据（模拟）
-  const clients: Client[] = [
-    {
-      id: 'client1',
-      companyName: 'Bathurst Development Co.',
-      companyNameCN: 'Bathurst开发公司',
-      contactPerson: '张经理',
-      preferredCurrency: 'AUD',
-      projectPreferences: {
-        style: ['现代', '商业'],
-        budget: ['50000-100000'],
-        timeline: ['2-3个月'],
-        communication: ['邮件', '微信']
-      }
-    },
-    {
-      id: 'client2',
-      companyName: 'NCCEC Group',
-      companyNameCN: 'NCCEC集团',
-      contactPerson: '李总',
-      preferredCurrency: 'USD',
-      projectPreferences: {
-        style: ['现代', '办公'],
-        budget: ['100000+'],
-        timeline: ['3-6个月'],
-        communication: ['邮件', '电话']
-      }
-    },
-    {
-      id: 'client3',
-      companyName: 'Olympic Club International',
-      companyNameCN: 'Olympic俱乐部国际',
-      contactPerson: '王主任',
-      preferredCurrency: 'EUR',
-      projectPreferences: {
-        style: ['创新', '现代'],
-        budget: ['30000-80000'],
-        timeline: ['1-2个月'],
-        communication: ['微信', '钉钉']
-      }
-    }
-  ]
+  // 汇率数据（从系统设置获取）
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([])
 
-  // 汇率数据（模拟）
-  const exchangeRates: ExchangeRate[] = [
-    { currency: '人民币', currencyCode: 'CNY', currencySymbol: '¥', rate: 1.0000, region: '中国', flag: '🇨🇳' },
-    { currency: '美元', currencyCode: 'USD', currencySymbol: '$', rate: 7.2400, region: '美国', flag: '🇺🇸' },
-    { currency: '澳元', currencyCode: 'AUD', currencySymbol: 'A$', rate: 4.7800, region: '澳大利亚', flag: '🇦🇺' },
-    { currency: '欧元', currencyCode: 'EUR', currencySymbol: '€', rate: 7.8500, region: '欧盟', flag: '🇪🇺' },
-    { currency: '英镑', currencyCode: 'GBP', currencySymbol: '£', rate: 9.1200, region: '英国', flag: '🇬🇧' },
-    { currency: '加元', currencyCode: 'CAD', currencySymbol: 'C$', rate: 5.3200, region: '加拿大', flag: '🇨🇦' },
-    { currency: '新加坡元', currencyCode: 'SGD', currencySymbol: 'S$', rate: 5.3600, region: '新加坡', flag: '🇸🇬' },
-    { currency: '迪拉姆', currencyCode: 'AED', currencySymbol: 'د.إ', rate: 1.9700, region: '阿联酋', flag: '🇦🇪' },
-  ]
+  // 初始化汇率数据
+  useEffect(() => {
+    const projectRates = getProjectExchangeRates()
+    setExchangeRates(projectRates)
+  }, [])
 
   // 检查是否为编辑模式
   useEffect(() => {
@@ -200,10 +154,10 @@ const CreateProject: React.FC = () => {
           exchangeRate: project.exchangeRate,
           status: project.status,
           paymentStatus: project.paymentStatus,
-          progress: project.progress,
           deadline: dayjs(project.deadline),
-          supplier: 'supplier1',
           description: '',
+          // 如果项目有已付金额信息，也要填充
+          paidAmount: (project as any).paidAmount,
         })
         
         setSelectedCurrency(project.currency)
@@ -232,23 +186,22 @@ const CreateProject: React.FC = () => {
     return `NF${year}${month}${day}${random}`
   }
 
-  // 处理客户选择
-  const handleClientSelect = (clientId: string) => {
-    const client = clients.find(c => c.id === clientId)
-    if (client) {
-      setSelectedClient(client)
-      setSelectedCurrency(client.preferredCurrency)
-      form.setFieldsValue({
-        clientId: clientId,
-        currency: client.preferredCurrency
-      })
-    }
-  }
-
   // 计算总成本
   const calculateTotalCost = () => {
     const allMembers = [...modelingMembers, ...renderingMembers, ...managementMembers]
     return allMembers.reduce((sum, member) => sum + member.unitPrice, 0)
+  }
+
+  // 根据项目状态自动计算进度
+  const calculateProgressByStatus = (status: string): number => {
+    const progressMap = {
+      'reporting': 5,    // 报备中: 5%
+      'modeling': 25,    // 建模: 25%
+      'rendering': 60,   // 渲染: 60%
+      'delivering': 90,  // 出图: 90%
+      'paused': 0        // 暂停: 保持当前进度(这里返回0，实际应保持原进度)
+    }
+    return progressMap[status as keyof typeof progressMap] || 0
   }
 
   // 渲染步骤内容
@@ -261,45 +214,6 @@ const CreateProject: React.FC = () => {
               form={form}
               currentProject={currentProject}
             />
-            
-            {/* 客户选择 */}
-            <div style={{
-              background: '#fff',
-              padding: 24,
-              borderRadius: 8,
-              marginTop: 16,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-            }}>
-              <h3>客户信息</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
-                {clients.map(client => (
-                  <div
-                    key={client.id}
-                    style={{
-                      border: selectedClient?.id === client.id ? '2px solid #1890ff' : '1px solid #d9d9d9',
-                      borderRadius: 8,
-                      padding: 16,
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease'
-                    }}
-                    onClick={() => handleClientSelect(client.id)}
-                  >
-                    <div style={{ fontWeight: 500, marginBottom: 8 }}>
-                      {client.companyName}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#8c8c8c', marginBottom: 4 }}>
-                      中文名：{client.companyNameCN}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#8c8c8c', marginBottom: 4 }}>
-                      联系人：{client.contactPerson}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#1890ff' }}>
-                      偏好币种：{client.preferredCurrency}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         )
 
@@ -417,10 +331,51 @@ const CreateProject: React.FC = () => {
                 }}>
                   <div><strong>项目名称：</strong>{form.getFieldValue('projectName')}</div>
                   <div><strong>协议号：</strong>{form.getFieldValue('protocolNumber')}</div>
-                  <div><strong>客户：</strong>{selectedClient?.companyNameCN || form.getFieldValue('clientName')}</div>
+                  <div><strong>客户：</strong>{form.getFieldValue('clientName')}</div>
                   <div><strong>项目类型：</strong>{form.getFieldValue('projectType')}</div>
-                  <div><strong>预算：</strong>¥{projectBudget.toLocaleString()}</div>
+                  <div><strong>项目状态：</strong>{
+                    (() => {
+                      const status = form.getFieldValue('status')
+                      const statusMap = {
+                        'reporting': '报备中',
+                        'modeling': '建模',
+                        'rendering': '渲染', 
+                        'delivering': '出图',
+                        'paused': '暂停'
+                      }
+                      return statusMap[status as keyof typeof statusMap] || status
+                    })()
+                  }</div>
+                  <div><strong>付款状态：</strong>{
+                    (() => {
+                      const paymentStatus = form.getFieldValue('paymentStatus')
+                      const paymentMap = {
+                        'unpaid': '未付款',
+                        'partial': '部分付款',
+                        'completed': '已付款',
+                        'overdue': '逾期'
+                      }
+                      const statusText = paymentMap[paymentStatus as keyof typeof paymentMap] || paymentStatus
+                      
+                      // 如果是部分付款，显示已付金额
+                      if (paymentStatus === 'partial') {
+                        const paidAmount = form.getFieldValue('paidAmount')
+                        const budget = form.getFieldValue('budget')
+                        if (paidAmount && budget) {
+                          const percentage = ((paidAmount / budget) * 100).toFixed(1)
+                          return `${statusText} (已付: ${paidAmount.toLocaleString()}, ${percentage}%)`
+                        }
+                      }
+                      
+                      return statusText
+                    })()
+                  }</div>
+                  <div><strong>预算：</strong>{selectedCurrency} {projectBudget.toLocaleString()}</div>
                   <div><strong>币种：</strong>{selectedCurrency}</div>
+                  <div><strong>项目进度：</strong>{calculateProgressByStatus(form.getFieldValue('status') || 'reporting')}% (根据状态自动计算)</div>
+                  <div><strong>预期项目结束时期：</strong>{
+                    form.getFieldValue('deadline') ? dayjs(form.getFieldValue('deadline')).format('YYYY-MM-DD') : '未设置'
+                  }</div>
                 </div>
               </div>
 
@@ -492,15 +447,26 @@ const CreateProject: React.FC = () => {
       // 验证第一步必填项
       const protocolNumber = form.getFieldValue('protocolNumber')
       const projectName = form.getFieldValue('projectName')
+      const clientName = form.getFieldValue('clientName')
       
-      if (!protocolNumber || !projectName || !selectedClient) {
-        message.error('请完善项目基本信息和客户选择')
+      if (!protocolNumber || !projectName || !clientName) {
+        message.error('请完善项目基本信息')
         return
       }
       
       if (!projectBudget || projectBudget <= 0) {
         message.error('请设置项目预算')
         return
+      }
+
+      // 验证部分付款时的已付金额
+      const paymentStatus = form.getFieldValue('paymentStatus')
+      if (paymentStatus === 'partial') {
+        const paidAmount = form.getFieldValue('paidAmount')
+        if (!paidAmount || paidAmount <= 0) {
+          message.error('部分付款状态下请输入已付金额')
+          return
+        }
       }
     }
     
@@ -522,22 +488,28 @@ const CreateProject: React.FC = () => {
 
   const handleFinish = async () => {
     try {
+      const status = form.getFieldValue('status') || 'reporting'
+      const paymentStatus = form.getFieldValue('paymentStatus') || 'unpaid'
+      const paidAmount = paymentStatus === 'partial' ? form.getFieldValue('paidAmount') : 0
+      
       const projectData: Project = {
         id: isEditMode ? id! : `NF${Date.now().toString().slice(-6)}`,
         name: form.getFieldValue('projectName'),
         protocolNumber: form.getFieldValue('protocolNumber'),
-        client: selectedClient?.companyNameCN || form.getFieldValue('clientName'),
-        status: isEditMode ? currentProject?.status || 'reporting' : 'reporting',
-        deadline: dayjs().add(30, 'day').format('YYYY-MM-DD'), // 默认30天后
+        client: form.getFieldValue('clientName'),
+        status: status,
+        deadline: form.getFieldValue('deadline') ? dayjs(form.getFieldValue('deadline')).format('YYYY-MM-DD') : dayjs().add(30, 'day').format('YYYY-MM-DD'),
         budget: projectBudget,
         currency: selectedCurrency,
         exchangeRate: exchangeRates.find(rate => rate.currencyCode === selectedCurrency)?.rate || 1,
         budgetCNY: projectBudget * (exchangeRates.find(rate => rate.currencyCode === selectedCurrency)?.rate || 1),
-        paymentStatus: 'unpaid',
-        progress: isEditMode ? currentProject?.progress || 0 : 0,
+        paymentStatus: paymentStatus,
+        progress: calculateProgressByStatus(status),
         type: form.getFieldValue('projectType') || '项目',
         createdAt: isEditMode ? currentProject?.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        // 添加已付金额字段（扩展Project类型）
+        ...(paymentStatus === 'partial' && { paidAmount: paidAmount }),
       }
       
       // 获取现有项目数据

@@ -1,5 +1,6 @@
 import React from 'react'
 import { ExchangeRate } from '../../types/project'
+import { isFixedRateMode, getRateModeDescription } from '../../utils/exchangeRates'
 
 interface BudgetCalculatorProps {
   budgetConfig: {
@@ -46,6 +47,8 @@ const BudgetCalculator: React.FC<BudgetCalculatorProps> = ({
   }
 
   const budgetDetails = calculateBudgetDetails()
+  const rateMode = getRateModeDescription()
+  const isFixed = isFixedRateMode()
 
   // 如果没有图量设置，不显示计算结果
   if (imageQuantity.birdViewCount === 0 && imageQuantity.humanViewCount === 0 && imageQuantity.animationDuration === 0) {
@@ -60,7 +63,24 @@ const BudgetCalculator: React.FC<BudgetCalculatorProps> = ({
       padding: '12px',
       marginTop: '16px'
     }}>
-      <div style={{ fontWeight: 500, marginBottom: 8, color: '#52c41a' }}>预算计算明细：</div>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: 8 
+      }}>
+        <div style={{ fontWeight: 500, color: '#52c41a' }}>预算计算明细：</div>
+        <div style={{ 
+          fontSize: '11px', 
+          color: isFixed ? '#fa8c16' : '#1890ff',
+          background: isFixed ? '#fff7e6' : '#e6f7ff',
+          padding: '2px 6px',
+          borderRadius: '3px',
+          border: `1px solid ${isFixed ? '#ffd591' : '#91d5ff'}`
+        }}>
+          {rateMode}
+        </div>
+      </div>
       <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
         <div style={{ fontSize: 12, minWidth: '200px' }}>
           鸟瞰图: {imageQuantity.birdViewCount} × {budgetDetails.currencySymbol}{budgetConfig.birdViewPrice} × {budgetConfig.birdViewDiscount}% = 
@@ -81,7 +101,7 @@ const BudgetCalculator: React.FC<BudgetCalculatorProps> = ({
         </div>
         {budgetConfig.currency !== 'CNY' && (
           <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
-            按汇率 {budgetDetails.exchangeRate} 转换为人民币: <span style={{ fontWeight: 500, color: '#52c41a' }}>¥{budgetDetails.totalCNY.toLocaleString()}</span>
+            按{rateMode}汇率 {budgetDetails.exchangeRate} 转换为人民币: <span style={{ fontWeight: 500, color: '#52c41a' }}>¥{budgetDetails.totalCNY.toLocaleString()}</span>
           </div>
         )}
       </div>

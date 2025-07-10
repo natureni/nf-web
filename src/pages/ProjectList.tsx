@@ -38,10 +38,10 @@ const ProjectList: React.FC = () => {
         client: 'Bathurst开发公司',
         status: 'reporting',
         deadline: '2025-03-15',
-        budget: 45000,
+        budget: 15226,
         currency: 'AUD',
-        exchangeRate: 4.78,
-        budgetCNY: 215100,
+        exchangeRate: 4.5,
+        budgetCNY: 68517,
         paymentStatus: 'unpaid',
         progress: 8,
         type: '商业综合体',
@@ -160,14 +160,32 @@ const ProjectList: React.FC = () => {
       const storedProjectsJson = localStorage.getItem('nflab_projects')
       if (storedProjectsJson) {
         const storedProjects = JSON.parse(storedProjectsJson)
-        setProjects(storedProjects)
-        console.log('从localStorage加载项目数据:', storedProjects)
-      } else {
-        const defaultProjects = getDefaultProjects()
-        setProjects(defaultProjects)
-        localStorage.setItem('nflab_projects', JSON.stringify(defaultProjects))
-        console.log('初始化默认项目数据:', defaultProjects)
+        
+        // 检查是否有旧数据需要更新（检查NF2501项目的预算）
+        const nf2501Project = storedProjects.find((p: Project) => p.id === 'NF2501')
+        if (nf2501Project && (nf2501Project.budget !== 15226 || nf2501Project.budgetCNY !== 68517)) {
+          console.log('检测到旧数据，更新为新的默认数据')
+          const defaultProjects = getDefaultProjects()
+          setProjects(defaultProjects)
+          localStorage.setItem('nflab_projects', JSON.stringify(defaultProjects))
+          console.log('已更新项目数据:', defaultProjects)
+          return
+        }
+        
+        // 如果存储的项目数据不为空且是最新版本，使用实际数据
+        if (storedProjects && storedProjects.length > 0) {
+          setProjects(storedProjects)
+          console.log('从localStorage加载实际项目数据:', storedProjects)
+          return
+        }
       }
+      
+      // 如果没有实际项目数据，使用默认示例数据
+      const defaultProjects = getDefaultProjects()
+      setProjects(defaultProjects)
+      localStorage.setItem('nflab_projects', JSON.stringify(defaultProjects))
+      console.log('初始化默认项目数据:', defaultProjects)
+      
     } catch (error) {
       console.error('加载项目数据失败:', error)
       const defaultProjects = getDefaultProjects()
@@ -231,6 +249,38 @@ const ProjectList: React.FC = () => {
     localStorage.setItem('nflab_projects', JSON.stringify(importedProjects))
     message.success('项目导入成功！')
     setImportModalVisible(false)
+  }
+
+  // 清除示例数据
+  const clearSampleData = () => {
+    Modal.confirm({
+      title: '清除示例数据',
+      content: '确定要清除所有示例数据吗？清除后将显示空的项目列表，您可以开始创建真实的项目数据。',
+      okText: '确定清除',
+      cancelText: '取消',
+      onOk: () => {
+        localStorage.removeItem('nflab_projects')
+        setProjects([])
+        message.success('示例数据已清除，您现在可以创建真实的项目数据')
+      },
+    })
+  }
+
+  // 检查是否使用的是示例数据
+  const isUsingSampleData = () => {
+    const storedProjectsJson = localStorage.getItem('nflab_projects')
+    if (!storedProjectsJson) return false
+    
+    try {
+      const storedProjects = JSON.parse(storedProjectsJson)
+      const defaultProjects = getDefaultProjects()
+      
+      // 简单检查：如果项目数量和第一个项目ID相同，可能是示例数据
+      return storedProjects.length === defaultProjects.length && 
+             storedProjects[0]?.id === defaultProjects[0]?.id
+    } catch {
+      return false
+    }
   }
 
   // 获取唯一客户列表
@@ -437,14 +487,14 @@ const ProjectList: React.FC = () => {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />} 
-              size="large"
-              onClick={() => navigate('/projects/create')}
-            >
-              新建项目
-            </Button>
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />} 
+            size="large"
+            onClick={() => navigate('/projects/create')}
+          >
+            新建项目
+          </Button>
             <Button 
               type="default" 
               icon={<ImportOutlined />} 
@@ -453,10 +503,20 @@ const ProjectList: React.FC = () => {
             >
               导入项目
             </Button>
-          </div>
+            {isUsingSampleData() && (
+            <Button 
+                type="default" 
+              size="large"
+                onClick={clearSampleData}
+                style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
+            >
+                清除示例数据
+            </Button>
+            )}
         </div>
-      </div>
-
+          </div>
+          </div>
+          
       <div className="content-wrapper">
         <ProjectSearchFilters
           filters={filters}
@@ -466,12 +526,38 @@ const ProjectList: React.FC = () => {
         
         <ProjectStats projects={filteredProjects} />
         
-        <ProjectTable
-          projects={filteredProjects}
-          onEditProject={handleEditProject}
-          onDeleteProject={handleDeleteProject}
-          onGenerateContract={handleGenerateContract}
-        />
+        {projects.length === 0 ? (
+          <div style={{ 
+            textAlign: 'center',
+            padding: '80px 20px',
+            background: '#fafafa',
+            borderRadius: 8,
+            border: '1px dashed #d9d9d9'
+          }}>
+            <div style={{ fontSize: '48px', color: '#d9d9d9', marginBottom: 16 }}>
+              📋
+            </div>
+            <h3 style={{ color: '#8c8c8c', marginBottom: 8 }}>暂无项目数据</h3>
+            <p style={{ color: '#bfbfbf', marginBottom: 24 }}>
+              您还没有创建任何项目，点击"新建项目"开始创建您的第一个项目
+            </p>
+            <Button 
+              type="primary" 
+              size="large"
+              icon={<PlusOutlined />}
+              onClick={() => navigate('/projects/create')}
+            >
+              创建第一个项目
+            </Button>
+          </div>
+        ) : (
+          <ProjectTable
+            projects={filteredProjects}
+            onEditProject={handleEditProject}
+            onDeleteProject={handleDeleteProject}
+            onGenerateContract={handleGenerateContract}
+          />
+        )}
       </div>
 
       {/* 合同预览模态框 */}

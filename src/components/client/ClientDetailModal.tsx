@@ -53,13 +53,13 @@ const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
         <TabPane tab="基本信息 / Basic Info" key="basic">
           <Descriptions column={2} bordered>
             <Descriptions.Item label="公司名称 / Company" span={2}>
-              <div style={{ fontWeight: 500, fontSize: 16 }}>{client.companyName}</div>
+                <div style={{ fontWeight: 500, fontSize: 16 }}>{client.companyName}</div>
             </Descriptions.Item>
             <Descriptions.Item label="联系人 / Contact">
-              <div style={{ fontWeight: 500 }}>{client.contactPerson}</div>
+                <div style={{ fontWeight: 500 }}>{client.contactPerson}</div>
             </Descriptions.Item>
             <Descriptions.Item label="职位 / Title">
-              <div>{client.title}</div>
+                <div>{client.title}</div>
             </Descriptions.Item>
             <Descriptions.Item label="邮箱 / Email">
               <a href={`mailto:${client.email}`}>{client.email}</a>

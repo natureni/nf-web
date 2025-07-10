@@ -74,6 +74,7 @@ const ProjectSearchFilters: React.FC<ProjectSearchFiltersProps> = ({
           <Option value="modeling">建模</Option>
           <Option value="rendering">渲染</Option>
           <Option value="delivering">出图</Option>
+          <Option value="paused">暂停</Option>
         </Select>
 
         <Select

@@ -27,6 +27,7 @@ import { Project, ProjectTeamMember, ScheduleItem } from '../types/project'
 import ProjectBasicInfoForm from '../components/project/ProjectBasicInfoForm'
 import TeamMemberManager from '../components/project/TeamMemberManager'
 import ProjectSchedule from '../components/project/ProjectSchedule'
+import { getProjectExchangeRates } from '../utils/exchangeRates'
 
 const { Step } = Steps
 
@@ -120,8 +121,9 @@ const EditProject: React.FC = () => {
     
     const totalUSD = humanViewUSD + halfBirdViewUSD + birdViewUSD + animationUSD
     
-    // 转换为人民币：美元金额 × 美元汇率
-    const usdRate = 7.2 // 默认汇率，实际应该从汇率系统获取
+    // 转换为人民币：美元金额 × 美元汇率（使用系统设置中的汇率）
+    const exchangeRates = getProjectExchangeRates()
+    const usdRate = exchangeRates.find(rate => rate.currencyCode === 'USD')?.rate || 7.2
     
     return Math.round(totalUSD * usdRate)
   }
@@ -131,13 +133,29 @@ const EditProject: React.FC = () => {
     try {
       const storedProjects = localStorage.getItem('nflab_projects')
       if (storedProjects) {
-        return JSON.parse(storedProjects)
+        const parsedProjects = JSON.parse(storedProjects)
+        
+        // 检查是否有旧数据需要更新（检查NF2501项目的预算）
+        const nf2501Project = parsedProjects.find((p: Project) => p.id === 'NF2501')
+        if (nf2501Project && (nf2501Project.budget !== 15226 || nf2501Project.budgetCNY !== 68517)) {
+          console.log('检测到旧数据，更新为新的默认数据')
+          const defaultProjects = getDefaultProjectsData()
+          localStorage.setItem('nflab_projects', JSON.stringify(defaultProjects))
+          return defaultProjects
+        }
+        
+        return parsedProjects
       }
     } catch (error) {
       console.error('获取项目数据失败:', error)
     }
     
     // 返回默认数据
+    return getDefaultProjectsData()
+  }
+
+  // 默认项目数据
+  const getDefaultProjectsData = (): Project[] => {
     return [
       {
         id: 'NF2501',
@@ -146,10 +164,10 @@ const EditProject: React.FC = () => {
         client: 'Bathurst开发公司',
         status: 'reporting',
         deadline: '2025-03-15',
-        budget: 45000,
+        budget: 15226,
         currency: 'AUD',
-        exchangeRate: 4.78,
-        budgetCNY: 215100,
+        exchangeRate: 4.5,
+        budgetCNY: 68517,
         paymentStatus: 'unpaid',
         progress: 8,
         type: '商业综合体',
@@ -174,15 +192,15 @@ const EditProject: React.FC = () => {
   }
 
   // 加载项目数据
-  const loadProjectData = async () => {
-    try {
-      setLoading(true)
-      const allProjects = getAllProjects()
-      const project = allProjects.find(p => p.id === id)
-      
+    const loadProjectData = async () => {
+      try {
+        setLoading(true)
+        const allProjects = getAllProjects()
+        const project = allProjects.find(p => p.id === id)
+
       if (project) {
         setCurrentProject(project)
-        
+
         // 填充表单数据
         form.setFieldsValue({
           projectName: project.name,
@@ -205,18 +223,18 @@ const EditProject: React.FC = () => {
         message.error('项目不存在')
         navigate('/projects')
       }
-    } catch (error) {
-      console.error('加载项目数据失败:', error)
-      message.error('加载项目数据失败')
+      } catch (error) {
+        console.error('加载项目数据失败:', error)
+        message.error('加载项目数据失败')
     } finally {
-      setLoading(false)
+        setLoading(false)
+      }
     }
-  }
 
   // 组件挂载时加载数据
   useEffect(() => {
     if (id) {
-      loadProjectData()
+    loadProjectData()
     }
   }, [id])
 
@@ -304,8 +322,21 @@ const EditProject: React.FC = () => {
     message.success('智能分配完成！已为每个成员分配工作量')
   }
 
+  // 获取项目预算（动态计算）
+  const getProjectBudget = (): number => {
+    // 优先使用当前项目的人民币预算
+    if (currentProject?.budgetCNY) {
+      return currentProject.budgetCNY
+    }
+    
+    // 如果没有，则基于图量计算
+    return calculateBudgetFromImages()
+  }
+
   // 渲染步骤内容
   const renderStepContent = () => {
+    const projectBudget = getProjectBudget() // 动态获取预算
+
     switch (currentStep) {
       case 0:
         return (
@@ -314,6 +345,7 @@ const EditProject: React.FC = () => {
             currentProject={currentProject}
             imageQuantities={imageQuantities}
             onImageQuantitiesChange={setImageQuantities}
+            projectTotalPrice={projectBudget} // 使用动态预算
           />
         )
 
@@ -333,35 +365,35 @@ const EditProject: React.FC = () => {
                   <div style={{ marginBottom: 8 }}>
                     <Tag color="red">鸟瞰视角</Tag>
                   </div>
-                  <InputNumber
+                    <InputNumber
                     value={imageQuantities.birdView}
                     onChange={(value) => setImageQuantities(prev => ({ ...prev, birdView: value || 0 }))}
-                    min={0}
+                      min={0}
                     style={{ width: '100%' }}
                     addonAfter="张"
-                  />
+                    />
                 </Col>
                 <Col span={5}>
                   <div style={{ marginBottom: 8 }}>
                     <Tag color="orange">半鸟瞰</Tag>
                   </div>
-                  <InputNumber
+                    <InputNumber
                     value={imageQuantities.halfBirdView}
                     onChange={(value) => setImageQuantities(prev => ({ ...prev, halfBirdView: value || 0 }))}
-                    min={0}
+                      min={0}
                     style={{ width: '100%' }}
                     addonAfter="张"
-                  />
+                    />
                 </Col>
                 <Col span={5}>
                   <div style={{ marginBottom: 8 }}>
                     <Tag color="blue">人视角</Tag>
                   </div>
-                  <InputNumber
+                    <InputNumber
                     value={imageQuantities.humanView}
                     onChange={(value) => setImageQuantities(prev => ({ ...prev, humanView: value || 0 }))}
                     min={0}
-                    style={{ width: '100%' }}
+                      style={{ width: '100%' }}
                     addonAfter="张"
                   />
                 </Col>
@@ -372,10 +404,10 @@ const EditProject: React.FC = () => {
                   <InputNumber
                     value={imageQuantities.animation}
                     onChange={(value) => setImageQuantities(prev => ({ ...prev, animation: value || 0 }))}
-                    min={0}
+                      min={0}
                     style={{ width: '100%' }}
                     addonAfter="秒"
-                  />
+                    />
                 </Col>
                 <Col span={4}>
                   <div style={{ marginBottom: 8 }}>
@@ -426,7 +458,7 @@ const EditProject: React.FC = () => {
               members={managerMembers}
               onMembersChange={setManagerMembers}
               departmentKey="manager"
-              projectTotalPrice={68480} // 使用项目实际预算68480
+              projectTotalPrice={projectBudget} // 使用动态预算
             />
 
             <TeamMemberManager
@@ -435,13 +467,13 @@ const EditProject: React.FC = () => {
               members={salesMembers}
               onMembersChange={setSalesMembers}
               departmentKey="sales"
-              projectTotalPrice={68480} // 使用项目实际预算68480
+              projectTotalPrice={projectBudget} // 使用动态预算
             />
 
             {/* 费用总计 */}
             <div style={{
               marginTop: 24,
-              padding: 16,
+                  padding: 16,
               background: '#f5f5f5',
               borderRadius: 8
             }}>
@@ -463,7 +495,7 @@ const EditProject: React.FC = () => {
                       }, 0).toLocaleString()
                     })()}
                   </div>
-                </div>
+                  </div>
                 <div>
                   <div style={{ fontSize: '12px', color: '#8c8c8c' }}>渲染费用</div>
                   <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#52c41a' }}>
@@ -479,8 +511,8 @@ const EditProject: React.FC = () => {
                         return sum + birdViewCost + halfBirdViewCost + humanViewCost
                       }, 0).toLocaleString()
                     })()}
-                  </div>
                 </div>
+            </div>
                 <div>
                   <div style={{ fontSize: '12px', color: '#8c8c8c' }}>动画费用</div>
                   <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1890ff' }}>
@@ -493,7 +525,7 @@ const EditProject: React.FC = () => {
                         return sum + ((m.animationWorkload || 0) * (m.originalMember?.animationPrice || 0))
                       }, 0).toLocaleString()
                     })()}
-                  </div>
+              </div>
                 </div>
                 <div>
                   <div style={{ fontSize: '12px', color: '#8c8c8c' }}>管理费用</div>
@@ -501,7 +533,7 @@ const EditProject: React.FC = () => {
                     ¥{(() => {
                       return managerMembers.reduce((sum, m) => {
                         if (m.originalMember?.priceType === 'percentage') {
-                          return sum + (68480 * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
+                          return sum + (projectBudget * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
                         }
                         return sum
                       }, 0).toLocaleString()
@@ -514,7 +546,7 @@ const EditProject: React.FC = () => {
                     ¥{(() => {
                       return salesMembers.reduce((sum, m) => {
                         if (m.originalMember?.priceType === 'percentage') {
-                          return sum + (68480 * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
+                          return sum + (projectBudget * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
                         }
                         return sum
                       }, 0).toLocaleString()
@@ -556,7 +588,7 @@ const EditProject: React.FC = () => {
                     // 管理费用
                     const managerTotal = managerMembers.reduce((sum, m) => {
                       if (m.originalMember?.priceType === 'percentage') {
-                        return sum + (68480 * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
+                        return sum + (projectBudget * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
                       }
                       return sum
                     }, 0)
@@ -564,14 +596,14 @@ const EditProject: React.FC = () => {
                     // 销售费用
                     const salesTotal = salesMembers.reduce((sum, m) => {
                       if (m.originalMember?.priceType === 'percentage') {
-                        return sum + (68480 * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
+                        return sum + (projectBudget * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
                       }
                       return sum
                     }, 0)
                     
                     return (modelingTotal + renderingTotal + animationTotal + managerTotal + salesTotal).toLocaleString()
                   })()}
-                </div>
+                  </div>
               </div>
             </div>
           </Card>
@@ -600,28 +632,28 @@ const EditProject: React.FC = () => {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
                     <div>
                       <strong>项目名称：</strong>{form.getFieldValue('projectName') || currentProject.name}
-                    </div>
+                  </div>
                     <div>
                       <strong>协议号：</strong>{form.getFieldValue('protocolNumber') || currentProject.protocolNumber}
-                    </div>
+                  </div>
                     <div>
                       <strong>客户：</strong>{form.getFieldValue('clientName') || currentProject.client}
-                    </div>
+                </div>
                     <div>
-                      <strong>预算：</strong>¥68,480
-                    </div>
+                      <strong>项目金额：</strong>¥{projectBudget.toLocaleString()}
+            </div>
                     <div>
                       <strong>状态：</strong>{form.getFieldValue('status') || currentProject.status}
-                    </div>
+              </div>
                     <div>
                       <strong>进度：</strong>{form.getFieldValue('progress') || currentProject.progress}%
                     </div>
                   </div>
-                </div>
-              )}
-              
+                  </div>
+                )}
+
               <h3 style={{ marginTop: 24 }}>团队配置</h3>
-              <div style={{ 
+                <div style={{ 
                 background: '#f5f5f5', 
                 padding: 20, 
                 borderRadius: 8,
@@ -644,7 +676,7 @@ const EditProject: React.FC = () => {
                           鸟瞰: {member.birdViewWorkload || 0}张 | 
                           半鸟瞰: {member.halfBirdViewWorkload || 0}张 | 
                           人视角: {member.humanViewWorkload || 0}张
-                        </div>
+                </div>
                         <div style={{ fontSize: '12px', color: '#52c41a' }}>
                           费用: ¥{(() => {
                             const birdViewCost = (member.birdViewWorkload || 0) * (member.originalMember?.birdViewPrice || 0)
@@ -663,7 +695,7 @@ const EditProject: React.FC = () => {
                   <div style={{ marginBottom: 16 }}>
                     <h4 style={{ color: '#52c41a', marginBottom: 8 }}>渲染制作人员 ({renderingMembers.length} 人)</h4>
                     {renderingMembers.map(member => (
-                      <div key={member.id} style={{ 
+                  <div key={member.id} style={{ 
                         marginBottom: 8, 
                         padding: '8px 12px', 
                         background: '#fff', 
@@ -675,7 +707,7 @@ const EditProject: React.FC = () => {
                           鸟瞰: {member.birdViewWorkload || 0}张 | 
                           半鸟瞰: {member.halfBirdViewWorkload || 0}张 | 
                           人视角: {member.humanViewWorkload || 0}张
-                        </div>
+                    </div>
                         <div style={{ fontSize: '12px', color: '#52c41a' }}>
                           费用: ¥{(() => {
                             const birdViewCost = (member.birdViewWorkload || 0) * (member.originalMember?.birdViewPrice || 0)
@@ -701,10 +733,10 @@ const EditProject: React.FC = () => {
                             <div style={{ textAlign: 'center' }}>
                               <UploadOutlined style={{ fontSize: '16px', color: '#999' }} />
                               <div style={{ fontSize: '12px', marginTop: 4 }}>上传图像</div>
-                            </div>
+                    </div>
                           </Upload>
-                        </div>
-                      </div>
+                  </div>
+            </div>
                     ))}
                   </div>
                 )}
@@ -724,7 +756,7 @@ const EditProject: React.FC = () => {
                         <div style={{ fontWeight: 'bold' }}>{member.originalMember?.name}</div>
                         <div style={{ fontSize: '12px', color: '#666' }}>
                           动画制作: {member.animationWorkload || 0}秒
-                        </div>
+            </div>
                         <div style={{ fontSize: '12px', color: '#52c41a' }}>
                           费用: ¥{((member.animationWorkload || 0) * (member.originalMember?.animationPrice || 0)).toLocaleString()}
                         </div>
@@ -748,11 +780,11 @@ const EditProject: React.FC = () => {
                         <div style={{ fontWeight: 'bold' }}>{member.originalMember?.name}</div>
                         <div style={{ fontSize: '12px', color: '#666' }}>
                           提成比例: {member.originalMember?.unitPrice}% | 工作量: {member.assignedWorkload || 1}
-                        </div>
+                </div>
                         <div style={{ fontSize: '12px', color: '#52c41a' }}>
-                          费用: ¥{(68480 * (member.originalMember?.unitPrice || 0) / 100 * (member.assignedWorkload || 1)).toLocaleString()}
-                        </div>
-                      </div>
+                          费用: ¥{(projectBudget * (member.originalMember?.unitPrice || 0) / 100 * (member.assignedWorkload || 1)).toLocaleString()}
+                </div>
+              </div>
                     ))}
                   </div>
                 )}
@@ -772,13 +804,13 @@ const EditProject: React.FC = () => {
                         <div style={{ fontWeight: 'bold' }}>{member.originalMember?.name}</div>
                         <div style={{ fontSize: '12px', color: '#666' }}>
                           提成比例: {member.originalMember?.unitPrice}% | 工作量: {member.assignedWorkload || 1}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#52c41a' }}>
-                          费用: ¥{(68480 * (member.originalMember?.unitPrice || 0) / 100 * (member.assignedWorkload || 1)).toLocaleString()}
-                        </div>
-                      </div>
-                    ))}
                   </div>
+                        <div style={{ fontSize: '12px', color: '#52c41a' }}>
+                          费用: ¥{(projectBudget * (member.originalMember?.unitPrice || 0) / 100 * (member.assignedWorkload || 1)).toLocaleString()}
+                  </div>
+                  </div>
+                    ))}
+            </div>
                 )}
 
                 {/* 费用汇总 */}
@@ -815,7 +847,7 @@ const EditProject: React.FC = () => {
                       // 管理费用
                       const managerTotal = managerMembers.reduce((sum, m) => {
                         if (m.originalMember?.priceType === 'percentage') {
-                          return sum + (68480 * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
+                          return sum + (projectBudget * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
                         }
                         return sum
                       }, 0)
@@ -823,19 +855,19 @@ const EditProject: React.FC = () => {
                       // 销售费用
                       const salesTotal = salesMembers.reduce((sum, m) => {
                         if (m.originalMember?.priceType === 'percentage') {
-                          return sum + (68480 * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
+                          return sum + (projectBudget * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
                         }
                         return sum
                       }, 0)
                       
                       return (modelingTotal + renderingTotal + animationTotal + managerTotal + salesTotal).toLocaleString()
                     })()}
-                  </div>
                 </div>
-              </div>
+                </div>
+                </div>
 
               <h3 style={{ marginTop: 24 }}>时间安排</h3>
-              <div style={{ 
+                  <div style={{ 
                 background: '#f5f5f5', 
                 padding: 20, 
                 borderRadius: 8,
@@ -877,22 +909,69 @@ const EditProject: React.FC = () => {
     try {
       const formValues = await form.validateFields()
       
+      // 计算实际的项目预算（基于团队配置）
+      const calculateActualBudget = () => {
+        // 建模固定费用
+        const modelingTotal = modelingMembers.reduce((sum, m) => {
+          if (m.originalMember?.priceType === 'fixed') {
+            return sum + 
+              ((m.birdViewWorkload || 0) * (m.originalMember?.birdViewPrice || 0)) +
+              ((m.halfBirdViewWorkload || 0) * (m.originalMember?.halfBirdViewPrice || 0)) +
+              ((m.humanViewWorkload || 0) * (m.originalMember?.humanViewPrice || 0))
+          }
+          return sum
+        }, 0)
+        
+        // 渲染固定费用
+        const renderingTotal = renderingMembers.reduce((sum, m) => {
+          return m.originalMember?.priceType === 'fixed' ? sum + ((m.assignedWorkload || 0) * (m.originalMember?.unitPrice || 0)) : sum
+        }, 0)
+        
+        // 动画固定费用
+        const animationTotal = animationMembers.reduce((sum, m) => {
+          return m.originalMember?.priceType === 'fixed' ? sum + ((m.animationWorkload || 0) * (m.originalMember?.animationPrice || 0)) : sum
+        }, 0)
+        
+        // 管理费用（基于总费用的百分比）
+        const baseBudget = modelingTotal + renderingTotal + animationTotal
+        const managerTotal = managerMembers.reduce((sum, m) => {
+          if (m.originalMember?.priceType === 'percentage') {
+            return sum + (baseBudget * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
+          }
+          return sum
+        }, 0)
+        
+        // 销售费用
+        const salesTotal = salesMembers.reduce((sum, m) => {
+          if (m.originalMember?.priceType === 'percentage') {
+            return sum + (baseBudget * (m.originalMember?.unitPrice || 0) / 100 * (m.assignedWorkload || 1))
+          }
+          return sum
+        }, 0)
+        
+        return modelingTotal + renderingTotal + animationTotal + managerTotal + salesTotal
+      }
+      
+      const actualBudget = calculateActualBudget()
+      const currentExchangeRate = formValues.exchangeRate || currentProject?.exchangeRate || 1
+      
       // 构建更新后的项目数据
       const updatedProject: Project = {
         ...currentProject!,
-        name: formValues.projectName,
-        protocolNumber: formValues.protocolNumber,
-        client: formValues.clientName,
-        type: formValues.projectType,
-        currency: formValues.currency,
-        budget: formValues.budget,
-        exchangeRate: formValues.exchangeRate,
-        budgetCNY: formValues.budget * formValues.exchangeRate,
-        status: formValues.status,
-        paymentStatus: formValues.paymentStatus,
-        progress: formValues.progress,
+        name: formValues.projectName || currentProject?.name,
+        protocolNumber: formValues.protocolNumber || currentProject?.protocolNumber,
+        client: formValues.clientName || currentProject?.client,
+        type: formValues.projectType || currentProject?.type,
+        currency: formValues.currency || currentProject?.currency,
+        budget: actualBudget, // 使用实际计算的预算
+        exchangeRate: currentExchangeRate,
+        budgetCNY: actualBudget * currentExchangeRate, // 使用实际计算的人民币预算
+        status: formValues.status || currentProject?.status,
+        paymentStatus: formValues.paymentStatus || currentProject?.paymentStatus,
+        progress: formValues.progress || currentProject?.progress,
         deadline: formValues.deadline ? formValues.deadline.format('YYYY-MM-DD') : currentProject?.deadline || dayjs().format('YYYY-MM-DD'),
         updatedAt: new Date().toISOString(),
+        paidAmount: formValues.paidAmount || currentProject?.paidAmount,
       }
 
       // 保存到localStorage
@@ -912,8 +991,8 @@ const EditProject: React.FC = () => {
   }
 
   if (loading) {
-    return (
-      <div style={{
+  return (
+      <div style={{ 
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -947,13 +1026,13 @@ const EditProject: React.FC = () => {
     <div>
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <Button 
-            icon={<ArrowLeftOutlined />} 
-            onClick={() => navigate('/projects')}
-          >
-            返回项目列表
-          </Button>
-          <div>
+        <Button 
+          icon={<ArrowLeftOutlined />} 
+          onClick={() => navigate('/projects')}
+        >
+          返回项目列表
+        </Button>
+        <div>
             <h1>编辑项目</h1>
             <p style={{ color: '#8c8c8c', marginTop: 8 }}>
               修改项目信息、团队配置和时间安排
@@ -965,8 +1044,8 @@ const EditProject: React.FC = () => {
       <div className="content-wrapper">
         <Steps current={currentStep} style={{ marginBottom: 24 }}>
           {steps.map((step, index) => (
-            <Step
-              key={index}
+            <Step 
+              key={index} 
               title={step.title}
               description={step.description}
             />
@@ -974,30 +1053,30 @@ const EditProject: React.FC = () => {
         </Steps>
 
         <div style={{ minHeight: '60vh' }}>
-          {renderStepContent()}
+        {renderStepContent()}
         </div>
-
+        
         <div style={{ 
           marginTop: 24, 
           textAlign: 'center',
           padding: '20px 0',
           borderTop: '1px solid #f0f0f0'
         }}>
-          {currentStep > 0 && (
+            {currentStep > 0 && (
             <Button style={{ margin: '0 8px' }} onClick={prev}>
-              上一步
-            </Button>
-          )}
-          {currentStep < steps.length - 1 && (
-            <Button type="primary" onClick={next}>
+                上一步
+              </Button>
+            )}
+            {currentStep < steps.length - 1 && (
+              <Button type="primary" onClick={next}>
               下一步
-            </Button>
-          )}
-          {currentStep === steps.length - 1 && (
-            <Button type="primary" onClick={handleFinish}>
+              </Button>
+            )}
+            {currentStep === steps.length - 1 && (
+              <Button type="primary" onClick={handleFinish}>
               保存项目
-            </Button>
-          )}
+              </Button>
+            )}
         </div>
       </div>
     </div>

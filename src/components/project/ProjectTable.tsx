@@ -8,6 +8,7 @@ import {
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { Project } from '../../types/project'
+import { getProjectExchangeRates } from '../../utils/exchangeRates'
 
 interface ProjectTableProps {
   projects: Project[]
@@ -31,6 +32,7 @@ const ProjectTable: React.FC<ProjectTableProps> = ({
       modeling: { color: '#fa8c16', text: '建模' },
       rendering: { color: '#52c41a', text: '渲染' },
       delivering: { color: '#ff4d4f', text: '出图' },
+      paused: { color: '#8c8c8c', text: '暂停' },
     }
     return configs[status as keyof typeof configs] || { color: '#d9d9d9', text: '未知' }
   }
@@ -67,6 +69,20 @@ const ProjectTable: React.FC<ProjectTableProps> = ({
     return symbols[currency] || currency
   }
 
+  // 获取当前系统汇率
+  const getCurrentExchangeRate = (currencyCode: string): number => {
+    const exchangeRates = getProjectExchangeRates()
+    const rate = exchangeRates.find(rate => rate.currencyCode === currencyCode)
+    return rate ? rate.rate : 1
+  }
+
+  // 根据人民币金额和当前汇率计算外币金额
+  const calculateForeignAmount = (cnyAmount: number, currencyCode: string): number => {
+    if (currencyCode === 'CNY') return cnyAmount
+    const rate = getCurrentExchangeRate(currencyCode)
+    return Math.round(cnyAmount / rate)
+  }
+
   const columns: ColumnsType<Project> = [
     {
       title: '项目信息',
@@ -95,6 +111,7 @@ const ProjectTable: React.FC<ProjectTableProps> = ({
         { text: '建模', value: 'modeling' },
         { text: '渲染', value: 'rendering' },
         { text: '出图', value: 'delivering' },
+        { text: '暂停', value: 'paused' },
       ],
       onFilter: (value, record) => record.status === value,
       render: (status) => {
@@ -127,28 +144,35 @@ const ProjectTable: React.FC<ProjectTableProps> = ({
       },
     },
     {
-      title: '预算',
+      title: '项目金额',
       key: 'budget',
       width: 200,
       sorter: (a, b) => a.budgetCNY - b.budgetCNY,
-      render: (_, record) => (
-        <div>
-          <div style={{ fontWeight: 500, color: '#1890ff', fontSize: '14px' }}>
-            ¥{record.budgetCNY.toLocaleString()}
+      render: (_, record) => {
+        // 获取当前系统汇率
+        const currentRate = getCurrentExchangeRate(record.currency)
+        // 以人民币金额为准，计算外币金额
+        const foreignAmount = calculateForeignAmount(record.budgetCNY, record.currency)
+        
+        return (
+          <div>
+            <div style={{ fontWeight: 500, color: '#1890ff', fontSize: '14px' }}>
+              ¥{record.budgetCNY.toLocaleString()}
+            </div>
+            {record.currency !== 'CNY' && (
+              <div style={{ fontSize: '12px', color: '#8c8c8c', marginTop: 2 }}>
+                {getCurrencySymbol(record.currency)}{foreignAmount.toLocaleString()} 
+                <span style={{ marginLeft: 4 }}>({record.currency})</span>
+              </div>
+            )}
+            {record.currency !== 'CNY' && (
+              <div style={{ fontSize: '11px', color: '#bfbfbf', marginTop: 1 }}>
+                汇率: {currentRate}
+              </div>
+            )}
           </div>
-          {record.currency !== 'CNY' && (
-            <div style={{ fontSize: '12px', color: '#8c8c8c', marginTop: 2 }}>
-              {getCurrencySymbol(record.currency)}{record.budget.toLocaleString()} 
-              <span style={{ marginLeft: 4 }}>({record.currency})</span>
-            </div>
-          )}
-          {record.currency !== 'CNY' && (
-            <div style={{ fontSize: '11px', color: '#bfbfbf', marginTop: 1 }}>
-              汇率: {record.exchangeRate}
-            </div>
-          )}
-        </div>
-      ),
+        )
+      },
     },
     {
       title: '付款状态',
